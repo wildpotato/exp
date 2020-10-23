@@ -1,115 +1,124 @@
-/*
- * Desrciption: Example benchmark program
- *
- * Date: 2020/10/22
- *
- * Author: Johnny Chan 180762 #6389
- *
- * In bestprice.c: _SendQuote_BestPrice() we see
- * [1st case] const int quoteSideVal = (quoteSide == '1') ? 0 : 1
- * [2nd case] const int quoteOpsSideVal = (quoteSide == '1') ? 1 : 0
- *
- *  Since quoteSide can only take on values of '1' and '2', it is possible
- *  that we speed up the first case [1st case] via more direct computation.
- *
- *  This program provides benchmark for exactly that reason.
- *
- *
- */
 #include <iostream>
 #include <string>
 #include <chrono>
 #include <vector>
 #include <numeric>
+#include <unordered_map>
 
 using std::vector;
 using std::string;
 
 const double zero_threshold = 1e-8;
+const int NUM_OF_COMPARISONS =   2;
+const int INT_NORM_METHOD =      0;
+const int INT_BIT_METHOD =       1;
 
-void initMyArr(vector<uint8_t> &vec)
+
+class Benchmark
 {
-    for (int i = 0; i < vec.size(); ++i) {
-        vec[i] = rand()%2 + 1;
+public:
+    Benchmark(int num_iter, int size) : _num_iter(num_iter), _sz(size)
+    {
+        intArr.resize(_sz, 0);
+        intRet1.resize(_sz, 0);
+        intRet2.resize(_sz, 0);
+        time.resize(NUM_OF_COMPARISONS, vector<double>(_num_iter, 0));
+        avg_time.resize(NUM_OF_COMPARISONS);
+        intResult.resize(_num_iter, false);
     }
-}
 
-void normalComp(const vector<uint8_t> &vec, vector<uint8_t> &ret1, vector<double> &time1,
-        int iter)
-{
-    auto start = std::chrono::steady_clock::now();
-    for (int i = 0; i < vec.size(); ++i) {
-        ret1[i] = vec[i] == 1 ? 0 : 1;
+    void generateReport()
+    {
+        for (int i = 0; i < _num_iter; ++i) {
+            initMyArr();
+            normalComp(i);
+            bitComp(i);
+        }
+        checkResult();
+        if (is_result_correct) {
+            std::cout << "Results are equal!\n";
+        }
+        computeAverageTime();
     }
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    //std::cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
-    time1[iter] = elapsed_seconds.count();
-}
 
-void bitComp(const vector<uint8_t> &vec, vector<uint8_t> &ret2, vector<double> &time2,
-        int iter)
-{
-    auto start = std::chrono::steady_clock::now();
-    for (int i = 0; i < vec.size(); ++i) {
-        ret2[i] = vec[i] - 1;
-    }
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    //std::cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
-    time2[iter] = elapsed_seconds.count();
-}
-
-bool checkResultEqual(const vector<uint8_t> &ret1, const vector<uint8_t> &ret2)
-{
-    for (int i = 0; i < ret1.size(); ++i) {
-        if (ret1[i] != ret2[i]) {
-            return false;
+    void checkResult() {
+        for (int j = 0; j < NUM_OF_COMPARISONS; ++j) {
+            bool curr_iter_match = true;
+            for (int i = 0; i < intRet1.size(); ++i) {
+                if (intRet1[i] != intRet2[i]) {
+                    is_result_correct = false;
+                    curr_iter_match = false;
+                }
+            }
+            if (curr_iter_match) {
+                intResult[j] = true;
+            }
         }
     }
-    return true;
-}
 
-void computeAverageTime(vector<double> &time, const string &method)
-{
-    double sum = std::accumulate(time.begin(), time.end(), zero_threshold);
-    //std::cout << __func__ << ": sum = " << sum << std::endl;
-    double avg_time = sum / time.size();
-    std::cout << "Average time using " << method << " is " << avg_time << std::endl;
-}
+    void initMyArr()
+    {
+        for (int i = 0; i < intArr.size(); ++i) {
+            intArr[i] = rand() % 2 + 1;
+        }
+    }
+
+    void normalComp(int iter)
+    {
+        auto start = std::chrono::steady_clock::now();
+        for (int i = 0; i < intArr.size(); ++i) {
+            intRet1[i] = (intArr[i] == 1) ? 0 : 1;
+        }
+        auto end = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        //std::cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
+        time[INT_NORM_METHOD][iter] = elapsed_seconds.count();
+    }
+
+    void bitComp(int iter)
+    {
+        auto start = std::chrono::steady_clock::now();
+        for (int i = 0; i < intArr.size(); ++i) {
+            intRet2[i] = intArr[i] - 1;
+        }
+        auto end = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        //std::cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
+        time[INT_BIT_METHOD][iter] = elapsed_seconds.count();
+    }
+
+    void computeAverageTime()
+    {
+        for (int i = 0; i < NUM_OF_COMPARISONS; ++i) {
+            double sum = std::accumulate(time[i].begin(), time[i].end(), zero_threshold);
+            //std::cout << __func__ << ": sum = " << sum << std::endl;
+            avg_time[i] = sum / time[i].size();
+            std::cout << "Average time using " << method_type[i] << " is " <<
+                avg_time[i] << std::endl;
+        }
+    }
+
+private:
+    const int _num_iter;
+    const int _sz;
+    bool is_result_correct = true;
+    vector<uint8_t> intArr;
+    vector<uint8_t> intRet1;
+    vector<uint8_t> intRet2;
+    vector<vector<double>>time;
+    vector<double> avg_time;
+    vector<bool> intResult;
+    vector<string>method_type = {"Integer Normal Conditional", "Integer Bit Computation"};
+};
 
 int main()
 {
-    const int num_iter = 100;
-    const int size = 1000000;
-    vector<uint8_t> myArr(size);
-    vector<uint8_t> ret1(size, 0);
-    vector<uint8_t> ret2(size, 0);
-    vector<double> time1(num_iter, 0);
-    vector<double> time2(num_iter, 0);
-    vector<bool> result(num_iter, false);
+    const int num_iter = 1e3;
+    const int size = 1e6;
 
-    for (int i = 0 ; i < num_iter; ++i) {
-        initMyArr(myArr);
+    Benchmark compare(num_iter, size);
 
-        normalComp(myArr, ret1, time1, i);
+    compare.generateReport();
 
-        bitComp(myArr, ret2, time2, i);
-
-        result[i] = checkResultEqual(ret1, ret2);
-    }
-
-    bool is_result_correct = true;
-    for (int i = 0 ; i < num_iter; ++i) {
-        if (result[i] != true) {
-            is_result_correct = false;
-            std::cout << "Result not equal: " << i << std::endl;
-        }
-    }
-    if (is_result_correct) {
-        std::cout << "Results are equal!" << std::endl;
-    }
-    computeAverageTime(time1, "NORMAL COMP");
-    computeAverageTime(time2, "BIT COMP");
     return 0;
 }
