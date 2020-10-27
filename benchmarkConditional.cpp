@@ -3,12 +3,12 @@
 #include <chrono>
 #include <vector>
 #include <numeric>
-#include <unordered_map>
+#include <iomanip>
 
 using std::vector;
 using std::string;
 
-const double zero_threshold = 1e-8;
+const double zero_threshold = 1e-9;
 const int NUM_OF_COMPARISONS =   2;
 const int INT_NORM_METHOD =      0;
 const int INT_BIT_METHOD =       1;
@@ -39,6 +39,7 @@ public:
             std::cout << "Results are equal!\n";
         }
         computeAverageTime();
+        computeSavingPercent();
     }
 
     void checkResult() {
@@ -98,6 +99,18 @@ public:
         }
     }
 
+    void computeSavingPercent()
+    {
+        for (int i = 0; i < NUM_OF_COMPARISONS; i+=2) {
+            double base = std::max(avg_time[i], avg_time[i+1]);
+            double diff = avg_time[i] > avg_time[i+1] ?
+            avg_time[i] - avg_time[i+1] : avg_time[i+1] - avg_time[i];
+            double percent = diff / base;
+            std::cout << "Percent Saving in Time = " << std::fixed <<
+            std::setprecision(2) << percent * 100 << "%" << std::endl;
+        }
+    }
+
 private:
     const int _num_iter;
     const int _sz;
@@ -113,7 +126,7 @@ private:
 
 int main()
 {
-    const int num_iter = 1e3;
+    const int num_iter = 1e2;
     const int size = 1e6;
 
     Benchmark compare(num_iter, size);
