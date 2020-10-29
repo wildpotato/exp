@@ -8,10 +8,10 @@
 using std::vector;
 using std::string;
 
-const double zero_threshold = 1e-9;
-const int NUM_OF_COMPARISONS =   2;
-const int INT_NORM_METHOD =      0;
-const int INT_BIT_METHOD =       1;
+constexpr double zero_threshold = 1e-9;
+constexpr int NUM_OF_COMPARISONS =   2;
+constexpr int INT_NORM_METHOD =      0;
+constexpr int INT_BIT_METHOD =       1;
 
 
 class Benchmark
@@ -126,8 +126,8 @@ private:
 
 int main()
 {
-    const int num_iter = 1e2;
-    const int size = 1e6;
+    constexpr int num_iter = 1e2;
+    constexpr int size = 1e6;
 
     Benchmark compare(num_iter, size);
 
