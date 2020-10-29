@@ -8,7 +8,7 @@
 using std::vector;
 using std::string;
 
-constexpr double zero_threshold = 1e-9;
+constexpr double ZERO_THRESHOLD = 1e-9;
 constexpr int NUM_OF_COMPARISONS =   2;
 constexpr int INT_NORM_METHOD =      0;
 constexpr int INT_BIT_METHOD =       1;
@@ -91,7 +91,7 @@ public:
     void computeAverageTime()
     {
         for (int i = 0; i < NUM_OF_COMPARISONS; ++i) {
-            double sum = std::accumulate(time[i].begin(), time[i].end(), zero_threshold);
+            double sum = std::accumulate(time[i].begin(), time[i].end(), ZERO_THRESHOLD);
             //std::cout << __func__ << ": sum = " << sum << std::endl;
             avg_time[i] = sum / time[i].size();
             std::cout << "Average time using " << method_type[i] << " is " <<
