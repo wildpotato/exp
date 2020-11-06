@@ -7,6 +7,7 @@
 
 using std::vector;
 using std::string;
+using std::cout;
 
 constexpr double ZERO_THRESHOLD = 1e-9;
 constexpr int NUM_OF_COMPARISONS =   2;
@@ -36,7 +37,7 @@ public:
         }
         checkResult();
         if (is_result_correct) {
-            std::cout << "Results are equal!\n";
+            cout << "Results are equal!\n";
         }
         computeAverageTime();
         computeSavingPercent();
@@ -72,7 +73,7 @@ public:
         }
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = end-start;
-        //std::cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
+        //cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
         time[INT_NORM_METHOD][iter] = elapsed_seconds.count();
     }
 
@@ -84,7 +85,7 @@ public:
         }
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = end-start;
-        //std::cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
+        //cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
         time[INT_BIT_METHOD][iter] = elapsed_seconds.count();
     }
 
@@ -92,9 +93,9 @@ public:
     {
         for (int i = 0; i < NUM_OF_COMPARISONS; ++i) {
             double sum = std::accumulate(time[i].begin(), time[i].end(), ZERO_THRESHOLD);
-            //std::cout << __func__ << ": sum = " << sum << std::endl;
+            //cout << __func__ << ": sum = " << sum << std::endl;
             avg_time[i] = sum / time[i].size();
-            std::cout << "Average time using " << method_type[i] << " is " <<
+            cout << "Average time using " << method_type[i] << " is " <<
                 avg_time[i] << std::endl;
         }
     }
@@ -106,7 +107,7 @@ public:
             double diff = avg_time[i] > avg_time[i+1] ?
             avg_time[i] - avg_time[i+1] : avg_time[i+1] - avg_time[i];
             double percent = diff / base;
-            std::cout << "Percent Saving in Time = " << std::fixed <<
+            cout << "Percent Saving in Time = " << std::fixed <<
             std::setprecision(2) << percent * 100 << "%" << std::endl;
         }
     }
