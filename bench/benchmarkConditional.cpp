@@ -9,10 +9,10 @@ using std::vector;
 using std::string;
 using std::cout;
 
-constexpr double ZERO_THRESHOLD = 1e-9;
-constexpr int NUM_OF_COMPARISONS =   2;
-constexpr int INT_NORM_METHOD =      0;
-constexpr int INT_BIT_METHOD =       1;
+constexpr double ZERO_THRESHOLD = 1e-9; // use this as zero in std::accumulate
+constexpr int NUM_OF_COMPARISONS =   2; // number of ways to do the same thing
+constexpr int INT_COND_METHOD =      0; // method using conditional
+constexpr int INT_LESS_METHOD =      1; // method using normal subtraction/less
 
 
 class Benchmark
@@ -74,7 +74,7 @@ public:
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = end-start;
         //cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
-        time[INT_NORM_METHOD][iter] = elapsed_seconds.count();
+        time[INT_COND_METHOD][iter] = elapsed_seconds.count();
     }
 
     void bitComp(int iter)
@@ -86,7 +86,7 @@ public:
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = end-start;
         //cout << __func__ << ": " << elapsed_seconds.count() << std::endl;
-        time[INT_BIT_METHOD][iter] = elapsed_seconds.count();
+        time[INT_LESS_METHOD][iter] = elapsed_seconds.count();
     }
 
     void computeAverageTime()
