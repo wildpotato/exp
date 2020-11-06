@@ -122,7 +122,7 @@ private:
     vector<vector<double>>time;
     vector<double> avg_time;
     vector<bool> intResult;
-    vector<string>method_type = {"Integer Normal Conditional", "Integer Bit Computation"};
+    vector<string>method_type = {"Integer Conditional", "Integer Subtraction"};
 };
 
 int main()
