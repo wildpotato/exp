@@ -38,6 +38,9 @@ public:
         checkResult();
         if (is_result_correct) {
             cout << "Results are equal!\n";
+        } else {
+            cout << "Something went wrong..\n";
+            return;
         }
         computeAverageTime();
         computeSavingPercent();
@@ -129,10 +132,7 @@ int main()
 {
     constexpr int num_iter = 1e2;
     constexpr int size = 1e6;
-
     Benchmark compare(num_iter, size);
-
     compare.generateReport();
-
     return 0;
 }
