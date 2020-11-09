@@ -2,7 +2,7 @@ EXECUTABLE = bench
 CXX = g++
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:%.cpp=%.o)
-CXXFLAGS = -std=c++11 -Wconversion -Wall -Werror -Wextra -pedantic
+CXXFLAGS = -std=c++17 -Wconversion -Wall -Wextra -pedantic -O3
 
 all: $(EXECUTABLE)
 
@@ -19,7 +19,7 @@ endif
 	$(CXX) $(CXXFLAGS) -c $*.cpp
 
 clean:
-	rm -f $(OBJECTS) $(EXECUTABLE)
+	rm -f $(OBJECTS) $(EXECUTABLE) a.out
 	rm -Rf *.dSYM
 
 .PHONY: all release degug profile static clean alltests help
