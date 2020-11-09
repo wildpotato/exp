@@ -130,7 +130,7 @@ private:
 
 int main()
 {
-    constexpr int num_iter = 1e2;
+    constexpr int num_iter = 1e3;
     constexpr int size = 1e6;
     Benchmark compare(num_iter, size);
     compare.generateReport();
