@@ -1,0 +1,172 @@
+-----------------------------------------------------------------
+#1 Benchmark CPU
+
+sysbench 1.1.0-bbee5d5 (using bundled LuaJIT 2.1.0-beta3)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Prime numbers limit: 20000
+
+Initializing worker threads...
+
+Threads started!
+
+CPU speed:
+    events per second:   520.84
+
+Throughput:
+    events/s (eps):                      520.8446
+    time elapsed:                        10.0011s
+    total number of events:              5209
+
+Latency (ms):
+         min:                                    1.70
+         avg:                                    1.92
+         max:                                   20.75
+         95th percentile:                        3.02
+         sum:                                 9998.02
+
+Threads fairness:
+    events (avg/stddev):           5209.0000/0.00
+    execution time (avg/stddev):   9.9980/0.00
+-----------------------------------------------------------------
+#2 Benchmark File IO
+
+sysbench 1.1.0-bbee5d5 (using bundled LuaJIT 2.1.0-beta3)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Extra file open flags: (none)
+128 files, 120MiB each
+15GiB total file size
+Block size 16KiB
+Number of IO requests: 0
+Read/Write ratio for combined random IO test: 1.50
+Periodic FSYNC enabled, calling fsync() each 100 requests.
+Calling fsync() at the end of test, Enabled.
+Using synchronous I/O mode
+Doing random r/w test
+Initializing worker threads...
+
+Threads started!
+
+
+Throughput:
+         read:  IOPS=1179.67 18.43 MiB/s (19.33 MB/s)
+         write: IOPS=786.38 12.29 MiB/s (12.88 MB/s)
+         fsync: IOPS=2521.53
+
+Latency (ms):
+         min:                                  0.00
+         avg:                                  0.22
+         max:                                  9.84
+         95th percentile:                      0.87
+         sum:                               9981.59
+
+-----------------------------------------------------------------
+#3 Benchmark Memory
+
+sysbench 1.1.0-bbee5d5 (using bundled LuaJIT 2.1.0-beta3)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Running memory speed test with the following options:
+  block size: 1KiB
+  total size: 102400MiB
+  operation: write
+  scope: global
+
+Initializing worker threads...
+
+Threads started!
+
+Total operations: 78672840 (7867256.95 per second)
+
+76828.95 MiB transferred (7682.87 MiB/sec)
+
+
+Throughput:
+    events/s (eps):                      7867256.9477
+    time elapsed:                        10.0000s
+    total number of events:              78672840
+
+Latency (ms):
+         min:                                    0.00
+         avg:                                    0.00
+         max:                                   16.26
+         95th percentile:                        0.00
+         sum:                                 4121.89
+
+Threads fairness:
+    events (avg/stddev):           78672840.0000/0.00
+    execution time (avg/stddev):   4.1219/0.00
+-----------------------------------------------------------------
+#4 Benchmark threads
+
+sysbench 1.1.0-bbee5d5 (using bundled LuaJIT 2.1.0-beta3)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+
+Throughput:
+    events/s (eps):                      3920.5164
+    time elapsed:                        10.0005s
+    total number of events:              39207
+
+Latency (ms):
+         min:                                    0.22
+         avg:                                    0.25
+         max:                                   17.47
+         95th percentile:                        0.24
+         sum:                                 9990.95
+
+Threads fairness:
+    events (avg/stddev):           39207.0000/0.00
+    execution time (avg/stddev):   9.9909/0.00
+-----------------------------------------------------------------
+#5 Benchmark mutex
+
+sysbench 1.1.0-bbee5d5 (using bundled LuaJIT 2.1.0-beta3)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
+
+
+Initializing worker threads...
+
+Threads started!
+
+
+Throughput:
+    events/s (eps):                      5.5192
+    time elapsed:                        0.1812s
+    total number of events:              1
+
+Latency (ms):
+         min:                                  180.83
+         avg:                                  180.83
+         max:                                  180.83
+         95th percentile:                      179.94
+         sum:                                  180.83
+
+Threads fairness:
+    events (avg/stddev):           1.0000/0.00
+    execution time (avg/stddev):   0.1808/0.00
+-----------------------------------------------------------------
