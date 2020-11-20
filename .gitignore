@@ -4,3 +4,5 @@ bench
 **.o
 **.a
 **.d
+hardware/mq/posix
+hardware/mq/sysV
