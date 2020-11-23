@@ -96,13 +96,21 @@ void mq_print_attr()
 
 int main(int argc, char const *argv[])
 {
-    if (argc > 1)
-        if (!strcasecmp(argv[1], "cli"))
+    if (argc > 1) {
+        if (!strcasecmp(argv[1], "cli")) {
             run_sending_app();
-        else if (!strcasecmp(argv[1], "serv"))
+		}
+        else if (!strcasecmp(argv[1], "serv")) {
             run_receiving_app();
-        else if (!strcasecmp(argv[1], "attr"))
+		}
+        else if (!strcasecmp(argv[1], "attr")) {
             mq_print_attr();
-
+		}
+		else {
+			printf("arg: cli/serv/attr\n");
+		}
+	} else {
+		printf("Use 1 required argument\n");
+	}
     return 0;
 }
