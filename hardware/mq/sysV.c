@@ -67,7 +67,7 @@ int run_receiving_app()
     int msgid;
 
     // ftok to generate unique key
-    key = ftok("/var/tmp/progfile", 65);
+    key = ftok("/var/tmp/progfile", PROJECT_ID);
 
     // msgget creates a message queue
     // and returns identifier
