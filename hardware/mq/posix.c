@@ -10,6 +10,7 @@
 #define EXPERIMENT_COUNT 100
 #define ITER_COUNT       1000000
 #define QUEUE_NAME       "/test_queue"
+#define QUEUE_PERM       0666
 #define MAX_SIZE         1024-1
 #define MAX_MSG          10
 #define MSG_STOP         "exit"
@@ -44,7 +45,7 @@ int mq_run_server()
     // mq_unlink(QUEUE_NAME);
     // exit(0);
 
-    mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, 0666, &attr);
+    mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, QUEUE_PERM, &attr);
     CHECK((mqd_t)-1 != mq);
 
     do {

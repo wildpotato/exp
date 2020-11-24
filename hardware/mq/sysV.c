@@ -8,7 +8,7 @@
 #define EXPERIMENT_COUNT 100
 #define ITER_COUNT       1000000
 #define MAX_SIZE         1024
-#define QUEUE_PERM       0660
+#define QUEUE_PERM       0666
 #define PAYLOAD_SIZE     MAX_SIZE - sizeof(long)
 #define PATH             "/var/tmp/progfile"
 #define PROJECT_ID       65
@@ -74,7 +74,7 @@ int run_receiving_app()
 
     // msgget creates a message queue
     // and returns identifier
-    msgid = msgget(key, 0666 | IPC_CREAT);
+    msgid = msgget(key, QUEUE_PERM | IPC_CREAT);
 
     while(1)
     {
