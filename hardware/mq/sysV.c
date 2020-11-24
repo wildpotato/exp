@@ -7,7 +7,9 @@
 
 #define EXPERIMENT_COUNT 100
 #define ITER_COUNT       1000000
-#define PAYLOAD_SIZE     1020 // msg = payload + msg_type
+#define MAX_SIZE         1024
+#define QUEUE_PERM       0660
+#define PAYLOAD_SIZE     MAX_SIZE - sizeof(long)
 #define PATH             "/var/tmp/progfile"
 #define PROJECT_ID       65
 
@@ -30,7 +32,7 @@ int run_sending_app()
 
     // msgget creates a message queue
     // and returns identifier
-    msgid = msgget(key, 0666 | IPC_CREAT);
+    msgid = msgget(key, QUEUE_PERM | IPC_CREAT);
     message.msg_type = 1; // must be greater than 0
 
     // printf("Write Data : ");
