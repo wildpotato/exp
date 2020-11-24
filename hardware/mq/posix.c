@@ -8,14 +8,11 @@
 #include <time.h>
 
 #define EXPERIMENT_COUNT 100
-
-clock_t start, end;
-double cpu_time_used_avg = 0;
-double cpu_time_used;
-
-#define QUEUE_NAME  "/test_queue"
-#define MAX_SIZE    1024
-#define MSG_STOP    "exit"
+#define ITER_COUNT       1000000
+#define QUEUE_NAME       "/test_queue"
+#define MAX_SIZE         1024
+#define MAX_MSG          10
+#define MSG_STOP         "exit"
 
 #define CHECK(x) \
     do { \
@@ -26,6 +23,10 @@ double cpu_time_used;
         } \
     } while (0) \
 
+clock_t start, end;
+double cpu_time_used_avg = 0;
+double cpu_time_used;
+
 int mq_run_server()
 {
     mqd_t mq;
@@ -35,7 +36,7 @@ int mq_run_server()
 
     /* initialize the queue attributes */
     attr.mq_flags = 0;
-    attr.mq_maxmsg = 10;
+    attr.mq_maxmsg = MAX_MSG;
     attr.mq_msgsize = MAX_SIZE;
     attr.mq_curmsgs = 0;
 
@@ -88,7 +89,7 @@ int mq_run_client()
     {
         start = clock();
 
-        for(i = 0; i != 1000000; i++)
+        for(i = 0; i != ITER_COUNT; i++)
             mq_send(mq, buffer, MAX_SIZE, 0);
 
         end = clock();
@@ -153,13 +154,18 @@ void mq_print_attr()
 
 int main(int argc, char const *argv[])
 {
-    if (argc > 1)
-        if (!strcasecmp(argv[1], "serv"))
+    if (argc > 1) {
+        if (!strcasecmp(argv[1], "serv")) {
             mq_run_server();
-        else if (!strcasecmp(argv[1], "cli"))
+        } else if (!strcasecmp(argv[1], "cli")) {
             mq_run_client();
-        else if (!strcasecmp(argv[1], "attr"))
+        } else if (!strcasecmp(argv[1], "attr")) {
             mq_print_attr();
-
+        } else {
+			printf("arg: cli/serv/attr\n");
+        }
+	} else {
+		printf("Use 1 required argument\n");
+	}
     return 0;
 }
