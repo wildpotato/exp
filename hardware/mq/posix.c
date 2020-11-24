@@ -10,7 +10,7 @@
 #define EXPERIMENT_COUNT 100
 #define ITER_COUNT       1000000
 #define QUEUE_NAME       "/test_queue"
-#define MAX_SIZE         1024
+#define MAX_SIZE         1024-1
 #define MAX_MSG          10
 #define MSG_STOP         "exit"
 
