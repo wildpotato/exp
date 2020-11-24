@@ -6,6 +6,7 @@
 #include <time.h>
 
 #define EXPERIMENT_COUNT 100
+#define ITER_COUNT       1000000
 #define PAYLOAD_SIZE     1020 // msg = payload + msg_type
 #define PATH             "/var/tmp/progfile"
 #define PROJECT_ID       65
@@ -42,7 +43,7 @@ int run_sending_app()
     {
         start = clock();
 
-        for (i = 0; i != 1000000; i++)
+        for (i = 0; i != ITER_COUNT; i++)
             msgsnd(msgid, &message, sizeof(message), 0);
 
         end = clock();
@@ -67,7 +68,7 @@ int run_receiving_app()
     int msgid;
 
     // ftok to generate unique key
-    key = ftok("/var/tmp/progfile", PROJECT_ID);
+    key = ftok(PATH, PROJECT_ID);
 
     // msgget creates a message queue
     // and returns identifier
