@@ -1,4 +1,7 @@
+**.swp
+**.swo
 sysV
 posix
+comp
 *.out
 !.gitignore
