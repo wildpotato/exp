@@ -6,6 +6,6 @@ posix:
 sysV:
 	gcc sysV.c -o sysV
 comp:
-	gcc compute.c -o compu
+	gcc compute.c -o comp
 clean:
 	rm sysV posix comp
