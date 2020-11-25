@@ -7,6 +7,7 @@
 #include <mqueue.h>
 #include <time.h>
 
+#define MQ_FLAG          O_NONBLOCK // use 0 or O_NONBLOCK
 #define EXPERIMENT_COUNT 100
 #define ITER_COUNT       1000000
 #define QUEUE_NAME       "/test_queue"
@@ -36,7 +37,7 @@ int mq_run_server()
     int must_stop = 0;
 
     /* initialize the queue attributes */
-    attr.mq_flags = 0;
+    attr.mq_flags = MQ_FLAG;
     attr.mq_maxmsg = MAX_MSG;
     attr.mq_msgsize = MAX_SIZE;
     attr.mq_curmsgs = 0;
