@@ -1,3 +1,4 @@
 sysV
 posix
+*.out
 !.gitignore
