@@ -6,9 +6,16 @@
 #include <errno.h>
 #include <mqueue.h>
 #include <time.h>
+#include <sys/time.h>
 
-#define MQ_FLAG          O_NONBLOCK // use 0 or O_NONBLOCK
-#define EXPERIMENT_COUNT 100
+/* when running this program, use one and only one of the options */
+#define BENCHMARK_SEND
+//#define BENCHMARK_SEND_AND_RECEIVE
+
+/* use 0 or O_NONBLOCK */
+#define MQ_FLAG          O_NONBLOCK
+
+#define EXPERIMENT_COUNT 10
 #define ITER_COUNT       1000000
 #define QUEUE_NAME       "/test_queue"
 #define QUEUE_PERM       0666
@@ -25,6 +32,12 @@
         } \
     } while (0) \
 
+/* this time struct is used to stamp the exact time after epoch
+ * right before the send operation occurs
+ */
+struct timeval send_time;
+
+/* these vars are used to calculate batch send time only */
 clock_t start, end;
 double cpu_time_used_avg = 0;
 double cpu_time_used;
@@ -87,23 +100,27 @@ int mq_run_client()
     strcpy(buffer, "hello");
     int e,i;
 
-    for( e = 0; e < EXPERIMENT_COUNT; e++ )
+    for (e = 0; e < EXPERIMENT_COUNT; e++)
     {
+#ifdef BENCHMARK_SEND
         start = clock();
-
-        for(i = 0; i != ITER_COUNT; i++)
+#endif
+#ifdef BENCHMARK_SEND_AND_RECEIVE
+        gettimeofday(&send_time, NULL);
+        printf("%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
+#endif
+        for (i = 0; i != ITER_COUNT; i++)
             mq_send(mq, buffer, MAX_SIZE, 0);
-
+#ifdef BENCHMARK_SEND
         end = clock();
         cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-
         printf("cpu_time_used = %f\n", cpu_time_used);
-
         cpu_time_used_avg += cpu_time_used;
+#endif
     }
-
+#ifdef BENCHMARK_SEND
     printf("cpu_time_used_avg = %f\n", cpu_time_used_avg/EXPERIMENT_COUNT);
-
+#endif
 
     // printf("Send to server (enter \"exit\" to stop it):\n");
     //
