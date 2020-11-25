@@ -9,8 +9,8 @@
 #include <sys/time.h>
 
 /* when running this program, use one and only one of the options */
-#define BENCHMARK_SEND
-//#define BENCHMARK_SEND_AND_RECEIVE
+//#define BENCHMARK_SEND
+#define BENCHMARK_SEND_AND_RECEIVE
 
 /* use 0 or O_NONBLOCK */
 #define MQ_FLAG          O_NONBLOCK
