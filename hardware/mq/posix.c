@@ -7,21 +7,17 @@
 #include <mqueue.h>
 #include <time.h>
 #include <sys/time.h>
+#include <getopt.h>
 
-/* when running this program, use one and only one of the options */
-//#define BENCHMARK_SEND
-#define BENCHMARK_SEND_AND_RECEIVE
+enum run_mode {SERV = 1, CLI = 2, ATTR = 3};
+enum time_type {AVG = 0, SEND = 1, RECV = 2};
 
-/* use 0 or O_NONBLOCK */
-#define MQ_FLAG          O_NONBLOCK
-
-#define EXPERIMENT_COUNT 10
-#define ITER_COUNT       1000000
-#define QUEUE_NAME       "/test_queue"
-#define QUEUE_PERM       0666
-#define MAX_SIZE         1024-1
-#define MAX_MSG          10
-#define MSG_STOP         "exit"
+#define MAX_FILE_NAME_LEN  32
+#define ITER_COUNT         1000000
+#define QUEUE_NAME         "/test_queue"
+#define QUEUE_PERM         0666
+#define MSG_STOP           "exit"
+#define MSG_SEND           "hello\0"
 
 #define CHECK(x) \
     do { \
@@ -32,111 +28,105 @@
         } \
     } while (0) \
 
-/* this time struct is used to stamp the exact time after epoch
- * right before the send operation occurs
- */
-struct timeval send_time;
-
-/* these vars are used to calculate batch send time only */
-clock_t start, end;
-double cpu_time_used_avg = 0;
-double cpu_time_used;
-
-int mq_run_server()
+int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, const int blocking)
 {
+    struct timeval recv_time;
     mqd_t mq;
     struct mq_attr attr;
-    char buffer[MAX_SIZE + 1];
+    char *buffer;
     int must_stop = 0;
-
+    buffer = malloc(msg_size);
+    if (buffer == NULL) {
+        perror("malloc");
+        return 1;
+    }
     /* initialize the queue attributes */
-    attr.mq_flags = MQ_FLAG;
-    attr.mq_maxmsg = MAX_MSG;
-    attr.mq_msgsize = MAX_SIZE;
+    attr.mq_flags = blocking == 1 ? 0 : O_NONBLOCK;
+    attr.mq_maxmsg = max_msgs;
+    attr.mq_msgsize = msg_size;
     attr.mq_curmsgs = 0;
 
     /* create the message queue */
     // mq_unlink(QUEUE_NAME);
     // exit(0);
-
     mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, QUEUE_PERM, &attr);
     CHECK((mqd_t)-1 != mq);
 
-    do {
-        ssize_t bytes_read;
-
-        /* receive the message */
-        bytes_read = mq_receive(mq, buffer, MAX_SIZE, NULL);
-        CHECK(bytes_read >= 0);
-
-        buffer[bytes_read] = '\0';
-        if (! strncmp(buffer, MSG_STOP, strlen(MSG_STOP)))
-        {
-            must_stop = 1;
+    /* open output file for write */
+    FILE *out_fp = fopen(out_file, "w");
+    if (out_fp == NULL) {
+        printf("Failed opening file %s\n", out_file);
+        return 1;
+    }
+    for (; must_stop < exe_cnt; ++must_stop) {
+        size_t bytes_read = -1;
+        bytes_read = mq_receive(mq, buffer, msg_size, NULL);
+        if (bytes_read > 0 && type == RECV) {
+            gettimeofday(&recv_time, NULL);
+            fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
         }
-        else
-        {
-            // printf("Received: %s\n", buffer);
-        }
-    } while (!must_stop);
+        printf("Received: %s\n", buffer);
+    }
 
     /* cleanup */
+    free(buffer);
+    fclose(out_fp);
     CHECK((mqd_t)-1 != mq_close(mq));
     CHECK((mqd_t)-1 != mq_unlink(QUEUE_NAME));
 
     return 0;
 }
 
-int mq_run_client()
+int mq_run_client(enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int exe_cnt)
 {
-    mqd_t mq;
-    char buffer[MAX_SIZE];
+    /* used for computing average send time (type == AVG) */
+    clock_t start, end;
+    double cpu_time_used_avg = 0;
+    double cpu_time_used;
 
-    /* open the mail queue */
+    /* used for timestamping send time (type == SEND) */
+    struct timeval send_time;
+
+    mqd_t mq;
+    char *buffer;
+    int e = 0, i = 0;
+    buffer = malloc(msg_size);
+    if (buffer == NULL) {
+        perror("malloc");
+        return 1;
+    }
+    strcpy(buffer, MSG_SEND);
+
+    /* open message queue */
     mq = mq_open(QUEUE_NAME, O_WRONLY);
     CHECK((mqd_t)-1 != mq);
+    /* open out file */
+    FILE *out_fp = fopen(out_file, "w");
 
-
-    strcpy(buffer, "hello");
-    int e,i;
-
-    for (e = 0; e < EXPERIMENT_COUNT; e++)
-    {
-#ifdef BENCHMARK_SEND
-        start = clock();
-#endif
-#ifdef BENCHMARK_SEND_AND_RECEIVE
-        gettimeofday(&send_time, NULL);
-        printf("%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
-#endif
-        for (i = 0; i != ITER_COUNT; i++)
-            mq_send(mq, buffer, MAX_SIZE, 0);
-#ifdef BENCHMARK_SEND
-        end = clock();
-        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-        printf("cpu_time_used = %f\n", cpu_time_used);
-        cpu_time_used_avg += cpu_time_used;
-#endif
+    if (type == AVG) {
+        for (; e < exe_cnt; ++e) {
+            start = clock();
+            for (; i < ITER_COUNT; ++i) {
+                mq_send(mq, buffer, msg_size, 0);
+            }
+            end = clock();
+            cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+            fprintf(out_fp, "send time = %f\n", cpu_time_used);
+            cpu_time_used_avg += cpu_time_used;
+        }
+        fprintf(out_fp, "average send time = %f\n", cpu_time_used_avg / exe_cnt);
+    } else if (type == SEND) {
+        for (; e < exe_cnt; ++e) {
+            gettimeofday(&send_time, NULL);
+            fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
+            mq_send(mq, buffer, msg_size, 0);
+        }
+    } else {
+        printf("Client incompatible with type recv, use send/avg instead\n");
+        return 1;
     }
-#ifdef BENCHMARK_SEND
-    printf("cpu_time_used_avg = %f\n", cpu_time_used_avg/EXPERIMENT_COUNT);
-#endif
-
-    // printf("Send to server (enter \"exit\" to stop it):\n");
-    //
-    // do {
-    //     printf("> ");
-    //     fflush(stdout);
-
-    //     memset(buffer, 0, MAX_SIZE);
-    //     fgets(buffer, MAX_SIZE, stdin);
-
-    //     /* send the message */
-    //     CHECK(0 <= mq_send(mq, buffer, MAX_SIZE, 0));
-
-    // } while (strncmp(buffer, MSG_STOP, strlen(MSG_STOP)));
-
     /* cleanup */
+    fclose(out_fp);
     CHECK((mqd_t)-1 != mq_close(mq));
 
     return 0;
@@ -145,15 +135,6 @@ int mq_run_client()
 void mq_print_attr()
 {
     struct mq_attr attr;
-    /*
-    struct rlimit limit;
-    if(getrlimit(RLIMIT_MSGQUEUE,&limit) == -1) {
-        perror("getrlimit");
-        return 1;
-    }
-    printf("RLIMIT_MSGQUEUE cur = %ld,max = %ld\n",(long)limit.rlim_cur,(long)limit.rlim_max);
-    */
-
     mqd_t q = mq_open("/mqtest",O_RDWR|O_CREAT,0660,NULL);
     if(q == -1) {
         perror("mq_open");
@@ -171,20 +152,105 @@ void mq_print_attr()
     mq_unlink("/mqtest");
 }
 
-int main(int argc, char const *argv[])
+static void usage(const char *prog) {
+    printf("-------------------------------------------------------------------------\n");
+    printf("%s --execution-count <execCnt> --mode <mode> --timing-type <type> --message-size <size> --max-num-mesg <num> --output-file <fileName> [---blocking]\n", prog);
+    printf("mode:\n");
+    printf("\tserv - run as server\n");
+    printf("\tcli  - run as client\n");
+    printf("\tattr - check attribute of the message queue\n");
+    printf("timing-type:\n");
+    printf("\tsend - if run as client, timestamp right before send\n");
+    printf("\tavg  - if run as client, compute average send time\n");
+    printf("\trecv - only used for server, timestamp after reception\n");
+    printf("-------------------------------------------------------------------------\n");
+    printf("Example usage for server: %s -e 100 -m serv -t recv -s 1024 -n 10 -o posixRecv.out\n", prog);
+    printf("Example usage for client: %s -e 100 -m cli -t send -s 1024 -n 10 -o posixSendAvg.out\n", prog);
+    printf("-------------------------------------------------------------------------\n");
+}
+
+int main(int argc, char **argv)
 {
-    if (argc > 1) {
-        if (!strcasecmp(argv[1], "serv")) {
-            mq_run_server();
-        } else if (!strcasecmp(argv[1], "cli")) {
-            mq_run_client();
-        } else if (!strcasecmp(argv[1], "attr")) {
-            mq_print_attr();
-        } else {
-			printf("arg: cli/serv/attr\n");
-        }
-	} else {
-		printf("Use 1 required argument\n");
-	}
+    struct option longOpts[] = {
+        { "execution-count", required_argument, NULL, 'e' },
+        { "mode", required_argument, NULL, 'm'            },
+        { "timing-type", required_argument, NULL, 't'     },
+        { "message-size", required_argument, NULL, 's'    },
+        { "max-num-mesg", required_argument, NULL, 'n'    },
+        { "output-file", required_argument, NULL, 'o'     },
+        { "blocking", no_argument, NULL, 'b'              },
+        { "help", no_argument, NULL, 'h'                  },
+        {  NULL, 0, NULL, '\0'}};
+    int opt_idx = 0, option = 0, exe_cnt = 0, ret = 0;
+    char out_file[MAX_FILE_NAME_LEN];
+    int msg_size;
+    int max_msgs;
+    enum run_mode mode;
+    enum time_type type;
+    int blocking = 0;
+    while ((option = getopt_long(argc, argv, "e:m:t:s:n:o:bh", longOpts,
+                &opt_idx)) != -1) {
+        switch (option) {
+            case 'e':
+                exe_cnt = atoi(optarg);
+                break;
+            case 'm':
+                if (strcmp("serv", optarg) == 0) {
+                    mode = SERV;
+                } else if (strcmp("cli", optarg) == 0) {
+                    mode = CLI;
+                } else if (strcmp("attr", optarg) == 0) {
+                    mode = ATTR;
+                } else {
+                    printf("Unsupported mode, please use serv/cli/attr\n");
+                    exit(0);
+                }
+                break;
+            case 't':
+                if (strcmp("send", optarg) == 0) {
+                    type = SEND;
+                } else if (strcmp("avg", optarg) == 0) {
+                    type = AVG;
+                } else if (strcmp("recv", optarg) == 0) {
+                    type = RECV;
+                } else {
+                    printf("Unsupported mode, please use send/avg/recv\n");
+                    exit(0);
+                }
+                break;
+            case 's':
+                msg_size = atoi(optarg);
+                break;
+            case 'n':
+                max_msgs = atoi(optarg);
+                break;
+            case 'o':
+                strcpy(out_file, optarg);
+                break;
+            case 'b':
+                blocking = 1;
+                break;
+            case 'h':
+                usage(argv[0]);
+                exit(0);
+            default:
+                printf("Unrecognized option %c\n", option);
+                usage(argv[0]);
+                exit(0);
+        } // switch
+    } // while
+    if (mode == SERV) {
+        ret = mq_run_server(exe_cnt, type, out_file, msg_size, max_msgs, blocking);
+    } else if (mode == CLI) {
+        ret = mq_run_client(type, out_file, msg_size, max_msgs, exe_cnt);
+    } else if (mode == ATTR) {
+
+    } else {
+        printf("You should never see this, something is terribly wrong\n");
+        exit(0);
+    }
+    if (ret != 0) {
+        printf("Something went wrong in this run!\n");
+    }
     return 0;
 }
