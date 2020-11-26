@@ -1,11 +1,13 @@
-all:
-	make posix
-	make sysV
+CC := gcc
+TARGET := posix sysV comp
+
+all: $(TARGET)
+
 posix:
-	gcc posix.c -o posix -lrt
+	$(CC) posix.c -o $@ -lrt
 sysV:
-	gcc sysV.c -o sysV
+	$(CC) sysV.c -o $@
 comp:
-	gcc compute.c -o comp
+	$(CC) compute.c -o $@
 clean:
-	rm sysV posix comp
+	rm $(TARGET)
