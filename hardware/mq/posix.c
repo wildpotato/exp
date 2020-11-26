@@ -165,7 +165,7 @@ static void usage(const char *prog) {
     printf("\trecv - only used for server, timestamp after reception\n");
     printf("-------------------------------------------------------------------------\n");
     printf("Example usage for server: %s -e 100 -m serv -t recv -s 1024 -n 10 -o posixRecv.out\n", prog);
-    printf("Example usage for client: %s -e 100 -m cli -t send -s 1024 -n 10 -o posixSendAvg.out\n", prog);
+    printf("Example usage for client: %s -e 100 -m cli -t send -s 1024 -n 10 -o posixSend.out\n", prog);
     printf("-------------------------------------------------------------------------\n");
 }
 
