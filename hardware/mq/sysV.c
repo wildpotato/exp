@@ -64,7 +64,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt) {
         for (; e < exe_cnt; e++) {
             start = clock();
             for (i = 0; i != ITER_COUNT; i++) {
-                msgsnd(msgid, &message, sizeof(message), 0);
+                msgsnd(msgid, &message, PAYLOAD_SIZE, 0);
                 end = clock();
                 cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
                 fprintf(out_fp, "send time = %f\n", cpu_time_used);
@@ -76,7 +76,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt) {
         for (; e < exe_cnt; ++e) {
             gettimeofday(&send_time, NULL);
             fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
-            msgsnd(msgid, &message, sizeof(message), 0);
+            msgsnd(msgid, &message, PAYLOAD_SIZE, 0);
         }
     } else {
         printf("Client incompatible with type recv, use send/avg instead\n");
@@ -106,7 +106,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     msgid = msgget(key, QUEUE_PERM | IPC_CREAT);
     for (; iter < exe_cnt; ++iter) {
         // msgrcv to receive message
-        msgrcv(msgid, &message, sizeof(message), MSG_TYPE, mq_flag);
+        msgrcv(msgid, &message, PAYLOAD_SIZE, MSG_TYPE, mq_flag);
         gettimeofday(&recv_time, NULL);
         fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
         printf("Received: %s \n", message.payload);
