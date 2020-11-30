@@ -94,10 +94,11 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
     return 0;
 }
 
-int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs)
+int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int blocking)
 {
     /* used for computing average send time (type == AVG) */
     clock_t start, end;
+    struct mq_attr attr;
     double cpu_time_used_avg = 0;
     double cpu_time_used;
 
@@ -114,8 +115,14 @@ int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const 
     }
     strcpy(buffer, MESSAGE);
 
+    /* initialize the queue attributes */
+    attr.mq_flags |= blocking == 1 ? 0 : O_NONBLOCK;
+    attr.mq_maxmsg = max_msgs;
+    attr.mq_msgsize = msg_size;
+    attr.mq_curmsgs = 0;
+
     /* open message queue */
-    mq = mq_open(QUEUE_NAME, O_WRONLY);
+    mq = mq_open(QUEUE_NAME, O_CREAT | O_WRONLY, QUEUE_PERM, &attr);
     if (mq < 0) {
         printf("client ");
         perror("mq_open");
@@ -266,7 +273,7 @@ int main(int argc, char **argv)
     if (mode == SERV) {
         ret = mq_run_server(exe_cnt, type, out_file, msg_size, max_msgs, blocking);
     } else if (mode == CLI) {
-        ret = mq_run_client( exe_cnt, type, out_file, msg_size, max_msgs);
+        ret = mq_run_client(exe_cnt, type, out_file, msg_size, max_msgs, blocking);
     } else if (mode == ATTR) {
 
     } else {
