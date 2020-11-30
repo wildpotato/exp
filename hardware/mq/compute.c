@@ -15,27 +15,18 @@ static void usage(const char *prog) {
     printf("Example usage on POSIX: %s -e 100 -s posixSend.out -r posixRecv.out -o result.out -p\n", prog);
 }
 
-static long int getSecFromUsec(long long int *usec) {
-    long int sec = 0;
-    while (*usec > ONE_MILLION) {
-        sec++;
-        *usec -= ONE_MILLION;
-    }
-    return sec;
-}
-
-static long int computeAvgTimeElapsed(long long int *totalUsecElapsed, int count) {
-    *totalUsecElapsed /= count;
-    return getSecFromUsec(totalUsecElapsed);
+static float getAvgUsecElapsed(long long int totalUsecElapsed, int count) {
+    float avg_usec_elapsed = (float)totalUsecElapsed / count;
+    return avg_usec_elapsed;
 }
 
 void processFiles(char old_file[], char new_file[], int count, enum queue_type mode, char out_file[]) {
     FILE *old_fp, *new_fp, *out_fp;
     struct timeval old_time, new_time;
-    long long int avg_elapsed_usec = 0;
+    long long int total_elapsed_usec = 0;
+    float avg_elapsed_usec = 0.0;
     long int sec = 0, usec = 0;
     long int elapsed_usec = 0;
-    long int avg_elapsed_sec = 0
     int i = 0;
     old_fp = fopen(old_file, "r");
     new_fp = fopen(new_file, "r");
@@ -48,11 +39,11 @@ void processFiles(char old_file[], char new_file[], int count, enum queue_type m
         elapsed_usec = (new_time.tv_sec - old_time.tv_sec) * ONE_MILLION +
             (new_time.tv_usec - old_time.tv_usec);
         fprintf(out_fp, "%ld\n", elapsed_usec);
-        avg_elapsed_usec += elapsed_usec;
+        total_elapsed_usec += elapsed_usec;
     } // for
-    avg_elapsed_sec = computeAvgTimeElapsed(avg_elapsed_usec, count);
-    fprintf(out_fp, "Average time elapsed: %ld seconds and %lld microseconds\n",
-            avg_elapsed_sec, avg_elapsed_usec);
+    avg_elapsed_usec = getAvgUsecElapsed(total_elapsed_usec, count);
+    fprintf(out_fp, "Total usecs elapsed: %lld\n", total_elapsed_usec);
+    fprintf(out_fp, "Average elapsed usecs per operation: %f\n", avg_elapsed_usec);
     fclose(out_fp);
     fclose(old_fp);
     fclose(new_fp);
