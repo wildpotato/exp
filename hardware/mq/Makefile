@@ -1,5 +1,5 @@
 CC := gcc
-TARGET := posix sysV comp
+TARGET := posix sysV compute
 
 all: $(TARGET)
 
