@@ -64,8 +64,8 @@ function run_pos_block()
 
 function run_pos_non_block()
 {
-    run_cmd_back_ground "./posix -e ${exe_cnt} -m serv -t recv -o ${posNonBlockRecvTime}"
-    run_cmd_fore_ground "./posix -e ${exe_cnt} -m cli -t send -o ${posNonBlockSendTime}"
+    run_cmd_back_ground "./posix -e ${exe_cnt} -m serv -t recv -s ${pq_msg_size} -n ${pq_max_num} -o ${posNonBlockRecvTime}"
+    run_cmd_fore_ground "./posix -e ${exe_cnt} -m cli -t send -s ${pq_msg_size} -n ${pq_max_num} -o ${posNonBlockSendTime}"
     run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${posNonBlockSendTime} -r ${posNonBlockRecvTime} -o ${posNonBlockResult}"
 }
 
@@ -80,5 +80,6 @@ function run_setup()
 run_setup
 #run_sys_block
 #run_sys_non_block
-run_pos_block
+#run_pos_block
+run_pos_non_block
 cd ${DIR}
