@@ -7,6 +7,8 @@ if [ ! -d ${LOGDIR} ]; then
 fi
 
 exe_cnt=10
+pq_msg_size=1024     # posix queue message size
+pq_max_num=10        # posix queue max number of messages on queue
 
 sysNonBlockSendTime=sysNonBlockSendTime.out
 sysNonBlockRecvTime=sysNonBlockRecvTime.out
@@ -39,37 +41,32 @@ function run_cmd_back_ground()
     echo "---------------------------------------------"
 }
 
-function run_sys_serv_nonblock()
-{
-    run_cmd "./sysV -e ${exe_cnt} -m serv -t recv -o ${sysNonBlockRecvTime}"
-}
-
-function run_sys_cli_nonblock()
-{
-    run_cmd "./sysV -e ${exe_cnt} -m cli -t send -o ${sysSendTime}"
-}
-
-function run_sys_serv_block()
+function run_sys_block()
 {
     run_cmd_back_ground "./sysV -e ${exe_cnt} -m serv -t recv -o ${sysBlockRecvTime} -b"
-}
-
-function run_sys_cli_block()
-{
     run_cmd_fore_ground "./sysV -e ${exe_cnt} -m cli -t send -o ${sysBlockSendTime}"
-}
-
-function compute_sys_block_time()
-{
     run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${sysBlockSendTime} -r ${sysBlockRecvTime} -o ${sysBlockResult}"
 }
 
-function run_sys_block()
+function run_sys_non_block()
 {
-    cd ${LOGDIR}
-    run_sys_serv_block
-    run_sys_cli_block
-    compute_sys_block_time
+    run_cmd_back_ground "./sysV -e ${exe_cnt} -m serv -t recv -o ${sysNonBlockRecvTime}"
+    run_cmd_fore_ground "./sysV -e ${exe_cnt} -m cli -t send -o ${sysNonBlockSendTime}"
+    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${sysNonBlockSendTime} -r ${sysNonBlockRecvTime} -o ${sysNonBlockResult}"
+}
+
+function run_pos_block()
+{
+    run_cmd_back_ground "./posix -e ${exe_cnt} -m serv -t recv -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockRecvTime} -b"
+    run_cmd_fore_ground "./posix -e ${exe_cnt} -m cli -t send -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockSendTime}"
+    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${posBlockSendTime} -r ${posBlockRecvTime} -o ${posBlockResult}"
+}
+
+function run_pos_non_block()
+{
+    run_cmd_back_ground "./posix -e ${exe_cnt} -m serv -t recv -o ${posNonBlockRecvTime}"
+    run_cmd_fore_ground "./posix -e ${exe_cnt} -m cli -t send -o ${posNonBlockSendTime}"
+    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${posNonBlockSendTime} -r ${posNonBlockRecvTime} -o ${posNonBlockResult}"
 }
 
 function run_setup()
@@ -77,10 +74,11 @@ function run_setup()
     cp compute ${LOGDIR}
     cp sysV ${LOGDIR}
     cp posix ${LOGDIR}
+    cd ${LOGDIR}
 }
 
-#TODO  run_sys_serv_nonblock
-#TODO  run_sys_cli_nonblock
 run_setup
-run_sys_block
+#run_sys_block
+#run_sys_non_block
+run_pos_block
 cd ${DIR}
