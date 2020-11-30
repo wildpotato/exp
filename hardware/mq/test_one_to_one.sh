@@ -59,10 +59,28 @@ function run_sys_cli_block()
     run_cmd_fore_ground "./sysV -e ${exe_cnt} -m cli -t send -o ${sysBlockSendTime}"
 }
 
+function compute_sys_block_time()
+{
+    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${sysBlockSendTime} -r ${sysBlockRecvTime} -o ${sysBlockResult}"
+}
+
+function run_sys_block()
+{
+    cd ${LOGDIR}
+    run_sys_serv_block
+    run_sys_cli_block
+    compute_sys_block_time
+}
+
+function run_setup()
+{
+    cp compute ${LOGDIR}
+    cp sysV ${LOGDIR}
+    cp posix ${LOGDIR}
+}
+
 #TODO  run_sys_serv_nonblock
 #TODO  run_sys_cli_nonblock
-cp sysV ${LOGDIR}
-cd ${LOGDIR}
-run_sys_serv_block
-run_sys_cli_block
+run_setup
+run_sys_block
 cd ${DIR}
