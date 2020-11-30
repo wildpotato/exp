@@ -26,6 +26,7 @@ enum time_type {AVG = 0, SEND = 1, RECV = 2};
 #define MAX_SIZE           1024
 #define QUEUE_PERM         0666
 #define PAYLOAD_SIZE       MAX_SIZE - sizeof(long)
+#define MESSAGE            "hello"
 #define PATH               "/var/tmp/progfile"
 #define PROJECT_ID         65
 
@@ -59,7 +60,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt) {
         return 1;
     }
 
-    strcpy(message.payload, "hello");
+    strcpy(message.payload, MESSAGE);
     if (type == AVG) {
         for (; e < exe_cnt; e++) {
             start = clock();
@@ -104,14 +105,25 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     // msgget creates a message queue
     // and returns identifier
     msgid = msgget(key, QUEUE_PERM | IPC_CREAT);
-    for (; iter < exe_cnt; ++iter) {
-        // msgrcv to receive message
-        msgrcv(msgid, &message, PAYLOAD_SIZE, MSG_TYPE, mq_flag);
-        gettimeofday(&recv_time, NULL);
-        fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
-        printf("Received: %s \n", message.payload);
+    if (blocking) {
+        for (; iter < exe_cnt; ++iter) {
+            // msgrcv to receive message
+            msgrcv(msgid, &message, PAYLOAD_SIZE, MSG_TYPE, mq_flag);
+            gettimeofday(&recv_time, NULL);
+            fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
+            printf("Received: %s \n", message.payload);
+        }
+    } else {
+        while (iter != exe_cnt) {
+            msgrcv(msgid, &message, PAYLOAD_SIZE, MSG_TYPE, mq_flag);
+            if (strcmp(message.payload, MESSAGE) == 0) {
+                gettimeofday(&recv_time, NULL);
+                fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
+                printf("Received: %s \n", message.payload);
+                ++iter;
+            }
+        }
     }
-
     /* cleanup */
     fclose(out_fp);
     msgctl(msgid, IPC_RMID, NULL);
@@ -139,6 +151,7 @@ static void usage(const char *prog) {
     printf("Example usage for client: %s -e 100 -m cli -t send -o posixSend.out\n", prog);
     printf("-------------------------------------------------------------------------\n");
 }
+
 int main(int argc, char **argv)
 {
     struct option longOpts[] = {
