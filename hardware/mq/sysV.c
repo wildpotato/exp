@@ -24,9 +24,9 @@ enum time_type {AVG = 0, SEND = 1, RECV = 2};
 #define MSG_TYPE           0
 #define ITER_COUNT         1000000
 #define MAX_SIZE           1024
+#define MESSAGE_LEN        512
 #define QUEUE_PERM         0666
 #define PAYLOAD_SIZE       MAX_SIZE - sizeof(long)
-#define MESSAGE            "hello"
 #define PATH               "/var/tmp/progfile"
 #define PROJECT_ID         65
 
@@ -60,12 +60,12 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
         return 1;
     }
 
-    strcpy(message.payload, MESSAGE);
+    memset(message.payload, '!', MESSAGE_LEN);
     if (type == AVG) {
         for (; e < exe_cnt; e++) {
             start = clock();
             for (i = 0; i != ITER_COUNT; i++) {
-                msgsnd(msgid, &message, PAYLOAD_SIZE, 0);
+                msgsnd(msgid, &message, MESSAGE_LEN, 0);
                 end = clock();
                 cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
                 fprintf(out_fp, "send time = %f\n", cpu_time_used);
@@ -74,10 +74,12 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
             fprintf(out_fp, "average send time = %f\n", cpu_time_used_avg / exe_cnt);
         }
     } else if (type == SEND) {
-        for (; e < exe_cnt; ++e) {
-            gettimeofday(&send_time, NULL);
-            fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
-            msgsnd(msgid, &message, PAYLOAD_SIZE, 0);
+        for (; e < exe_cnt;) {
+            if (msgsnd(msgid, &message, MESSAGE_LEN, 0) != -1) {
+                gettimeofday(&send_time, NULL);
+                fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
+                ++e;
+            }
         }
     } else {
         printf("[ERROR] client incompatible with type recv, use send/avg instead\n");
@@ -91,7 +93,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     FILE *out_fp;
     key_t key;
     int msgid;
-    int iter = 0;
+    int must_stop = 0;
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
 
     out_fp = fopen(out_file, "w");
@@ -105,25 +107,28 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     /* msgget creates a message queue and returns identifier */
     msgid = msgget(key, QUEUE_PERM | IPC_CREAT);
     if (blocking) {
-        for (; iter < exe_cnt; ++iter) {
+        for (; must_stop < exe_cnt;) {
+            ssize_t bytes_read = -1;
             /* msgrcv to receive message */
-            msgrcv(msgid, &message, PAYLOAD_SIZE, MSG_TYPE, mq_flag);
-            gettimeofday(&recv_time, NULL);
-            fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
-            if (debug) {
-                printf("Received: %s \n", message.payload);
-            }
-        }
-    } else {
-        while (iter != exe_cnt) {
-            msgrcv(msgid, &message, PAYLOAD_SIZE, MSG_TYPE, mq_flag);
-            if (strcmp(message.payload, MESSAGE) == 0) {
+            if (msgrcv(msgid, &message, MESSAGE_LEN, MSG_TYPE, mq_flag) == MESSAGE_LEN) {
                 gettimeofday(&recv_time, NULL);
                 fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
                 if (debug) {
                     printf("Received: %s \n", message.payload);
                 }
-                ++iter;
+                ++must_stop;
+            }
+        }
+    } else {
+        while (must_stop != exe_cnt) {
+            ssize_t bytes_read = -1;
+            if (msgrcv(msgid, &message, MESSAGE_LEN, MSG_TYPE, mq_flag) == MESSAGE_LEN) {
+                gettimeofday(&recv_time, NULL);
+                fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
+                if (debug) {
+                    printf("Received: %s \n", message.payload);
+                }
+                ++must_stop;
             }
         }
     }

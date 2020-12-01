@@ -13,10 +13,10 @@ enum run_mode {SERV = 1, CLI = 2, ATTR = 3};
 enum time_type {AVG = 0, SEND = 1, RECV = 2};
 
 #define MAX_FILE_NAME_LEN  32
+#define MESSAGE_LEN        512
 #define ITER_COUNT         1000000
 #define QUEUE_NAME         "/test_posix_queue"
 #define QUEUE_PERM         0660
-#define MESSAGE            "hello"
 
 #define CHECK(x) \
     do { \
@@ -65,21 +65,23 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
         return 1;
     }
     if (blocking) {
-        for (; must_stop < exe_cnt; ++must_stop) {
+        for (; must_stop < exe_cnt;) {
             size_t bytes_read = -1;
-            bytes_read = mq_receive(mq, buffer, msg_size, NULL);
-            if (bytes_read > 0 && type == RECV) {
+            bytes_read = mq_receive(mq, buffer, MESSAGE_LEN, NULL);
+            if (bytes_read == MESSAGE_LEN && type == RECV) {
                 gettimeofday(&recv_time, NULL);
                 fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
-            }
-            if (debug) {
-                printf("[%s] Received: %s\n", __FILE__, buffer);
+                if (debug) {
+                    printf("[%s] Received: %s\n", __FILE__, buffer);
+                }
+                ++must_stop;
             }
         }
     } else {
         while (must_stop != exe_cnt) {
-            mq_receive(mq, buffer, msg_size, NULL);
-            if (strcmp(buffer, MESSAGE) == 0) {
+            size_t bytes_read = -1;
+            bytes_read = mq_receive(mq, buffer, MESSAGE_LEN, NULL);
+            if (bytes_read == MESSAGE_LEN) {
                 gettimeofday(&recv_time, NULL);
                 fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
                 if (debug) {
@@ -117,7 +119,7 @@ int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const 
         perror("malloc");
         return 1;
     }
-    strcpy(buffer, MESSAGE);
+    memset(buffer, '!', MESSAGE_LEN);
 
     /* initialize the queue attributes */
     attr.mq_flags |= blocking == 1 ? 0 : O_NONBLOCK;
@@ -152,10 +154,12 @@ int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const 
         }
         fprintf(out_fp, "average send time = %f\n", cpu_time_used_avg / exe_cnt);
     } else if (type == SEND) {
-        for (; e < exe_cnt; ++e) {
-            gettimeofday(&send_time, NULL);
-            fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
-            mq_send(mq, buffer, msg_size, 0);
+        for (; e < exe_cnt;) {
+            if (mq_send(mq, buffer, MESSAGE_LEN, 0) != -1) {
+                gettimeofday(&send_time, NULL);
+                fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
+                ++e;
+            }
         }
     } else {
         printf("[ERROR] client incompatible with type recv, use send/avg instead\n");
