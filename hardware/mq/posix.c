@@ -27,7 +27,7 @@ enum time_type {AVG = 0, SEND = 1, RECV = 2};
         } \
     } while (0) \
 
-int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int blocking)
+int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int blocking, int debug)
 {
     struct timeval recv_time;
     mqd_t mq;
@@ -46,22 +46,20 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
     attr.mq_curmsgs = 0;
 
     /* create the message queue */
-    // mq_unlink(QUEUE_NAME);
-    // exit(0);
     mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, QUEUE_PERM, &attr);
     if (mq < 0) {
-        printf("server ");
+        printf("[%s] failed starting server\n", __FILE__);
         perror("mq_open");
         return -1;
     } else {
-        printf("open server\n");
+        printf("[%s] start server\n", __FILE__);
     }
     CHECK((mqd_t)-1 != mq);
 
     /* open output file for write */
     FILE *out_fp = fopen(out_file, "w");
     if (out_fp == NULL) {
-        printf("Failed opening file %s\n", out_file);
+        printf("[ERROR] failed opening file %s\n", out_file);
         return 1;
     }
     if (blocking) {
@@ -72,7 +70,9 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
                 gettimeofday(&recv_time, NULL);
                 fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
             }
-            printf("Received: %s\n", buffer);
+            if (debug) {
+                printf("[%s] Received: %s\n", __FILE__, buffer);
+            }
         }
     } else {
         while (must_stop != exe_cnt) {
@@ -80,7 +80,9 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
             if (strcmp(buffer, MESSAGE) == 0) {
                 gettimeofday(&recv_time, NULL);
                 fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
-                printf("Received: %s\n", buffer);
+                if (debug) {
+                    printf("[%s] Received: %s\n", __FILE__, buffer);
+                }
                 ++must_stop;
             }
         }
@@ -94,7 +96,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
     return 0;
 }
 
-int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int blocking)
+int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int blocking, int debug)
 {
     /* used for computing average send time (type == AVG) */
     clock_t start, end;
@@ -123,14 +125,15 @@ int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const 
 
     /* open message queue */
     mq = mq_open(QUEUE_NAME, O_CREAT | O_WRONLY, QUEUE_PERM, &attr);
-    if (mq < 0) {
-        printf("client ");
-        perror("mq_open");
-        return -1;
-    } else {
-        printf("open client\n");
-    }
     CHECK((mqd_t)-1 != mq);
+    if (debug) {
+        if (mq < 0) {
+            printf("[%s] failed starting client\n", __FILE__);
+            return -1;
+        } else {
+            printf("[%s] start client\n", __FILE__);
+        }
+    }
     /* open out file */
     FILE *out_fp = fopen(out_file, "w");
 
@@ -153,13 +156,12 @@ int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const 
             mq_send(mq, buffer, msg_size, 0);
         }
     } else {
-        printf("Client incompatible with type recv, use send/avg instead\n");
+        printf("[ERROR] client incompatible with type recv, use send/avg instead\n");
         return 1;
     }
     /* cleanup */
     fclose(out_fp);
     CHECK((mqd_t)-1 != mq_close(mq));
-
     return 0;
 }
 
@@ -185,7 +187,7 @@ void mq_print_attr()
 
 static void usage(const char *prog) {
     printf("-------------------------------------------------------------------------\n");
-    printf("%s --execution-count <execCnt> --mode <mode> --timing-type <type> --message-size <size> --max-num-mesg <num> --output-file <fileName> [---blocking]\n", prog);
+    printf("%s --execution-count <execCnt> --mode <mode> --timing-type <type> --message-size <size> --max-num-mesg <num> --output-file <fileName> [--blocking] [--debug-flag]\n", prog);
     printf("mode:\n");
     printf("\tserv - run as server\n");
     printf("\tcli  - run as client\n");
@@ -210,6 +212,7 @@ int main(int argc, char **argv)
         { "max-num-mesg", required_argument, NULL, 'n'    },
         { "output-file", required_argument, NULL, 'o'     },
         { "blocking", no_argument, NULL, 'b'              },
+        { "debug_flag", no_argument, NULL, 'g'            },
         { "help", no_argument, NULL, 'h'                  },
         {  NULL, 0, NULL, '\0'}};
     int opt_idx = 0, option = 0, exe_cnt = 0, ret = 0;
@@ -219,7 +222,8 @@ int main(int argc, char **argv)
     enum run_mode mode;
     enum time_type type;
     int blocking = 0;
-    while ((option = getopt_long(argc, argv, "e:m:t:s:n:o:bh", longOpts,
+    int debug_flag = 0;
+    while ((option = getopt_long(argc, argv, "e:m:t:s:n:o:bgh", longOpts,
                 &opt_idx)) != -1) {
         switch (option) {
             case 'e':
@@ -261,27 +265,30 @@ int main(int argc, char **argv)
             case 'b':
                 blocking = 1;
                 break;
+            case 'g':
+                debug_flag = 1;
+                break;
             case 'h':
                 usage(argv[0]);
                 exit(0);
             default:
-                printf("Unrecognized option %c\n", option);
+                printf("Unrecognized option `\\x%x'\n", option);
                 usage(argv[0]);
                 exit(0);
         } // switch
     } // while
     if (mode == SERV) {
-        ret = mq_run_server(exe_cnt, type, out_file, msg_size, max_msgs, blocking);
+        ret = mq_run_server(exe_cnt, type, out_file, msg_size, max_msgs, blocking, debug_flag);
     } else if (mode == CLI) {
-        ret = mq_run_client(exe_cnt, type, out_file, msg_size, max_msgs, blocking);
+        ret = mq_run_client(exe_cnt, type, out_file, msg_size, max_msgs, blocking, debug_flag);
     } else if (mode == ATTR) {
 
     } else {
-        printf("You should never see this, something is terribly wrong\n");
+        printf("[ERROR] You should never see this, something is terribly wrong\n");
         return 1;
     }
     if (ret != 0) {
-        printf("Something went wrong in this run!\n");
+        printf("[ERROR] Something went wrong in this run!\n");
     }
     return 0;
 }
