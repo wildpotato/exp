@@ -172,8 +172,10 @@ int main(int argc, char **argv)
     enum time_type type;
     int blocking = 0;
     int debug_flag = 0;
+    int opt_flag = 0;
     while ((option = getopt_long(argc, argv, "e:m:t:o:bgh", longOpts,
                 &opt_idx)) != -1) {
+        opt_flag = 1;
         switch (option) {
             case 'e':
                 exe_cnt = atoi(optarg);
@@ -220,6 +222,10 @@ int main(int argc, char **argv)
                 return 1;
         } // switch
     } // while
+    if (!opt_flag) {
+        usage(argv[0]);
+        return 1;
+    }
     if (mode == SERV) {
         ret = mq_run_server(exe_cnt, type, out_file, blocking, debug_flag);
     } else if (mode == CLI) {

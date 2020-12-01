@@ -67,8 +67,10 @@ int main(int argc, char **argv) {
     char recv_file_name[MAX_FILE_NAME_LEN];
     char output_file_name[MAX_FILE_NAME_LEN];
     enum queue_type mode;
+    int opt_flag = 0;
     while ((option = getopt_long(argc, argv, "e:s:r:o:vph", longOpts,
                 &option_index)) != -1) {
+        opt_flag = 1;
         switch (option) {
             case 'e':
                 exe_cnt = atoi(optarg);
@@ -96,6 +98,10 @@ int main(int argc, char **argv) {
                 return 1;
         } // switch
     } // while
+    if (!opt_flag) {
+        usage(argv[0]);
+        return 1;
+    }
     processFiles(send_file_name, recv_file_name, exe_cnt, mode, output_file_name);
     return 0;
 }
