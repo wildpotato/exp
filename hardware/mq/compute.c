@@ -72,15 +72,12 @@ int main(int argc, char **argv) {
         switch (option) {
             case 'e':
                 exe_cnt = atoi(optarg);
-                //printf("e: %d\n", exe_cnt);
                 break;
             case 's':
                 strcpy(send_file_name, optarg);
-                //printf("s: %s\n", send_file_name);
                 break;
             case 'r':
                 strcpy(recv_file_name, optarg);
-                //printf("r: %s\n", recv_file_name);
                 break;
             case 'o':
                 strcpy(output_file_name, optarg);
@@ -92,14 +89,13 @@ int main(int argc, char **argv) {
                 break;
             case 'h':
                 usage(argv[0]);
-                exit(0);
+                return 0;
             default:
-                printf("Unrecognized option %c\n", option);
+                printf("[ERROR] Unrecognized option `\\x%x'\n", option);
                 usage(argv[0]);
-                exit(0);
+                return 1;
         } // switch
     } // while
-    //printf("mode = %d (systemV=1, POSIX=2)\n", mode);
     processFiles(send_file_name, recv_file_name, exe_cnt, mode, output_file_name);
     return 0;
 }
