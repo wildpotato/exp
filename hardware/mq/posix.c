@@ -47,12 +47,14 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
 
     /* create the message queue */
     mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, QUEUE_PERM, &attr);
-    if (mq < 0) {
-        printf("[%s] failed starting server\n", __FILE__);
-        perror("mq_open");
-        return -1;
-    } else {
-        printf("[%s] start server\n", __FILE__);
+    if (debug) {
+        if (mq < 0) {
+            printf("[%s] failed starting server\n", __FILE__);
+            perror("mq_open");
+            return -1;
+        } else {
+            printf("[%s] start server\n", __FILE__);
+        }
     }
     CHECK((mqd_t)-1 != mq);
 
