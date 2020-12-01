@@ -228,6 +228,7 @@ int main(int argc, char **argv)
     int opt_flag = 0;
     while ((option = getopt_long(argc, argv, "e:m:t:s:n:o:bgh", longOpts,
                 &opt_idx)) != -1) {
+        opt_flag = 1;
         switch (option) {
             case 'e':
                 exe_cnt = atoi(optarg);
