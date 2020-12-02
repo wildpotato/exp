@@ -121,7 +121,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
                 gettimeofday(&send_time, NULL);
                 fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
                 ++e;
-            } else {
+            } else { // msgsnd returns error
                 printf("[%s %d] %s: %s (%d)\n", __FILE__, __LINE__, __func__, strerror(error_code), error_code);
                 return error_code;
             }
@@ -175,12 +175,26 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
                 printf("Received: %s \n", message.payload);
             }
             ++must_stop;
-        } else {
-            printf("[%s %d] %s: %s (%d)\n", __FILE__, __LINE__, __func__, strerror(error_code), error_code);
+        } else { // msgrcv returns error
             if (error_code == ENOMSG) {
                 continue;
+            } else if (error_code == EINVAL) {
+                printf("msgrcv: EINVAL\n");
+            } else if (error_code == EFAULT) {
+                printf("msgrcv: EFAULT\n");
+            } else if (error_code == EIDRM) {
+                printf("msgrcv: EIDRM\n");
+            } else if (error_code == ENOMEM) {
+                printf("msgrcv: ENOMEM\n");
+            } else if (error_code == EINTR) {
+                printf("msgrcv: EINTR\n");
+            } else if (error_code == EAGAIN) {
+                printf("msgrcv: EAGAIN\n");
+            } else if (error_code == EACCES) {
+                printf("msgrcv: EACCES\n");
             }
-            return error_code;
+            printf("[%s %d] %s: %s (%d)\n", __FILE__, __LINE__, __func__, strerror(error_code), error_code);
+            break;
         }
     }
     /* cleanup */
