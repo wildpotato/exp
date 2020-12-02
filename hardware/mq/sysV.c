@@ -122,6 +122,21 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
                 fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
                 ++e;
             } else { // msgsnd returns error
+                if (error_code == EAGAIN) {
+                    printf("msgsnd: EAGAIN\n");
+                } else if (error_code == EACCES) {
+                    printf("msgsnd: EACCES\n");
+                } else if (error_code == EFAULT) {
+                    printf("msgsnd: EFAULT\n");
+                } else if (error_code == EIDRM) {
+                    printf("msgsnd: EIDRM\n");
+                } else if (error_code == EINTR) {
+                    printf("msgsnd: EINTR\n");
+                } else if (error_code == EINVAL) {
+                    printf("msgsnd: EINVAL\n");
+                } else if (error_code == ENOMEM) {
+                    printf("msgsnd: ENOMEM\n");
+                }
                 printf("[%s %d] %s: %s (%d)\n", __FILE__, __LINE__, __func__, strerror(error_code), error_code);
                 return error_code;
             }
@@ -200,6 +215,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     /* cleanup */
     fclose(out_fp);
     msgctl(msgid, IPC_RMID, NULL);
+    printf("Server removing queue now!\n");
     remove(MQ_KEY_FILE);
     return 0;
 }
