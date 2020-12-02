@@ -42,7 +42,7 @@ void processFiles(char old_file[], char new_file[], int count, enum queue_type m
         total_elapsed_usec += elapsed_usec;
     } // for
     avg_elapsed_usec = getAvgUsecElapsed(total_elapsed_usec, count);
-    fprintf(out_fp, "Total usecs elapsed: %lld\n", total_elapsed_usec);
+    fprintf(out_fp, "Total usecs elapsed: %lld (count=%d)\n", total_elapsed_usec, count);
     fprintf(out_fp, "Average elapsed usecs per operation: %f\n", avg_elapsed_usec);
     fclose(out_fp);
     fclose(old_fp);

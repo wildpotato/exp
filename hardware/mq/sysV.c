@@ -7,6 +7,8 @@
 #include <time.h>
 #include <sys/time.h>
 #include <getopt.h>
+#include <unistd.h>
+#include <errno.h>
 
 enum run_mode {SERV = 1, CLI = 2, ATTR = 3};
 enum time_type {AVG = 0, SEND = 1, RECV = 2};
@@ -29,6 +31,7 @@ enum time_type {AVG = 0, SEND = 1, RECV = 2};
 #define PAYLOAD_SIZE       MAX_SIZE - sizeof(long)
 #define PATH               "/var/tmp/progfile"
 #define PROJECT_ID         65
+#define MQ_KEY_FILE        "mq_key_file"
 
 /* these vars are used to calculate batch send time only */
 clock_t start, end;
@@ -40,24 +43,60 @@ struct mesg_buffer {
     char payload[PAYLOAD_SIZE];
 } message;
 
+static inline int store_key(key_t key) {
+    FILE *fp;
+    fp = fopen(MQ_KEY_FILE, "w");
+    if (fp == NULL) {
+        printf("[ERROR] failed writing key to file %s\n", MQ_KEY_FILE);
+        return -1;
+    }
+    fprintf(fp, "%d", key);
+    fclose(fp);
+    return 0;
+}
+
+static inline key_t retrieve_key() {
+    FILE *fp;
+    key_t key;
+    int file_exists = -1;
+    do {
+        file_exists = access(MQ_KEY_FILE, F_OK);
+    } while (file_exists);
+    fp = fopen(MQ_KEY_FILE, "r");
+    if (fp == NULL) {
+        printf("[ERROR] failed retrieving key from file %s\n", MQ_KEY_FILE);
+        return -1;
+    }
+    fscanf(fp, "%d", &key);
+    fclose(fp);
+    return key;
+}
+
 int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int debug) {
     struct timeval send_time;
     FILE *out_fp;
     key_t key;
     int msgid;
-    int e = 0, i = 0;
+    int e = 0, i = 0, ret = -1, error_code = 0;
 
-    /* ftok to generate unique key */
-    key = ftok(PATH, PROJECT_ID);
+    key = retrieve_key();
+    if (key == -1) {
+        return -1;
+    }
 
-    /* msgget creates a message queue and returns identifier */
+    /* msgget retrieves msgid from given key */
     msgid = msgget(key, QUEUE_PERM | IPC_CREAT);
+    if (msgid == -1) {
+        printf("%s: msgid=-1 %s\n", __func__, strerror(errno));
+        return -1;
+    }
+
     message.msg_type = 1; // must be greater than 0
 
     out_fp = fopen(out_file, "w");
     if (out_fp == NULL) {
         printf("[ERROR] failed opening file %s\n", out_file);
-        return 1;
+        return -1;
     }
 
     memset(message.payload, '!', MESSAGE_LEN);
@@ -75,10 +114,16 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
         }
     } else if (type == SEND) {
         for (; e < exe_cnt;) {
-            if (msgsnd(msgid, &message, MESSAGE_LEN, 0) != -1) {
+            error_code = 0;
+            ret = msgsnd(msgid, &message, MESSAGE_LEN, 0);
+            error_code = errno;
+            if (ret == 0) {
                 gettimeofday(&send_time, NULL);
                 fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
                 ++e;
+            } else {
+                printf("[%s %d] %s: %s (%d)\n", __FILE__, __LINE__, __func__, strerror(error_code), error_code);
+                return error_code;
             }
         }
     } else {
@@ -95,46 +140,53 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     int msgid;
     int must_stop = 0;
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
+    int ret = -1;
 
     out_fp = fopen(out_file, "w");
     if (out_fp == NULL) {
         printf("[ERROR] failed opening file %s\n", out_file);
-        return 1;
+        return -1;
     }
     /* ftok to generate unique key */
     key = ftok(PATH, PROJECT_ID);
-
-    /* msgget creates a message queue and returns identifier */
-    msgid = msgget(key, QUEUE_PERM | IPC_CREAT);
-    if (blocking) {
-        for (; must_stop < exe_cnt;) {
-            ssize_t bytes_read = -1;
-            /* msgrcv to receive message */
-            if (msgrcv(msgid, &message, MESSAGE_LEN, MSG_TYPE, mq_flag) == MESSAGE_LEN) {
-                gettimeofday(&recv_time, NULL);
-                fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
-                if (debug) {
-                    printf("Received: %s \n", message.payload);
-                }
-                ++must_stop;
-            }
-        }
+    if (key == -1) {
+        printf("%s: key=-1 %s\n", __func__, strerror(errno));
+        return -1;
     } else {
-        while (must_stop != exe_cnt) {
-            ssize_t bytes_read = -1;
-            if (msgrcv(msgid, &message, MESSAGE_LEN, MSG_TYPE, mq_flag) == MESSAGE_LEN) {
-                gettimeofday(&recv_time, NULL);
-                fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
-                if (debug) {
-                    printf("Received: %s \n", message.payload);
-                }
-                ++must_stop;
+        do {
+            ret = store_key(key);
+        } while (ret != 0);
+    }
+    /* msgget creates a message queue and returns identifier */
+    msgid = msgget(key, QUEUE_PERM | IPC_CREAT | IPC_EXCL);
+    if (msgid == -1) {
+        printf("%s: msgid=-1 %s\n", __func__, strerror(errno));
+        return -1;
+    }
+    while (must_stop != exe_cnt) {
+        ssize_t bytes_read = -1;
+        int error_code = 0;
+        ret = msgrcv(msgid, &message, MESSAGE_LEN, MSG_TYPE, mq_flag);
+        error_code = errno;
+        if (ret == 0) {
+            gettimeofday(&recv_time, NULL);
+            fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
+            if (debug) {
+                printf("Received: %s \n", message.payload);
             }
+            ++must_stop;
+        } else {
+            printf("[%s %d] %s: %s (%d)\n", __FILE__, __LINE__, __func__, strerror(error_code), error_code);
+            if (error_code == ENOMSG) {
+                continue;
+            }
+            return error_code;
         }
     }
     /* cleanup */
     fclose(out_fp);
     msgctl(msgid, IPC_RMID, NULL);
+    remove(MQ_KEY_FILE);
     return 0;
 }
 
@@ -240,6 +292,9 @@ int main(int argc, char **argv)
     } else {
         printf("[ERROR] You should never see this, something is terribly wrong\n");
         return 1;
+    }
+    if (ret != 0) {
+        printf("[ERROR] Something went wrong in this run!\n");
     }
     return 0;
 }

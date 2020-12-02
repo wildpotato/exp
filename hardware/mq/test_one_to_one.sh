@@ -6,7 +6,7 @@ if [ ! -d ${LOGDIR} ]; then
     mkdir -p ${LOGDIR}
 fi
 
-exe_cnt=10
+exe_cnt=10000
 pq_msg_size=1024     # posix queue message size
 pq_max_num=10        # posix queue max number of messages on queue
 
@@ -79,7 +79,7 @@ function run_setup()
 
 run_setup
 run_sys_block
-run_sys_non_block
-run_pos_block
-run_pos_non_block
+#run_sys_non_block
+#run_pos_block
+#run_pos_non_block
 cd ${DIR}
