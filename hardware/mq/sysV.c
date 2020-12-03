@@ -57,7 +57,7 @@ enum time_type {AVG = 0, SEND = 1, RECV = 2};
 #define PROJECT_ID         65
 #define MQ_KEY_FILE        "mq_key_file"
 
-/* these vars are used to calculate batch send time only */
+/* these vars are used to calculate average send time only */
 clock_t start, end;
 double cpu_time_used_avg = 0;
 double cpu_time_used;
@@ -173,7 +173,8 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
     return 0;
 }
 
-static inline void display_mq_ds_info(int mqid) {
+/* code fragments written for single queue use only */
+static inline void display_mq_ds_info() {
     struct msginfo info;
     struct msqid_ds ds;
     int mq;
@@ -183,13 +184,13 @@ static inline void display_mq_ds_info(int mqid) {
         printf("[ERROR] msgctl MSG_STAT\n");
     } else {
         printf("---------------------------------------------------------\n");
-        printf("[INFO] Current number of queues on system: %d\n", info.msgpool);
+        printf("[INFO] Current number of queues existent on system: %d\n", info.msgpool);
         printf("[INFO] Maximum number of entries in message map: %d\n", info.msgmap);
-        printf("[INFO] Maximum bytes a single message queue can contain: %d\n", info.msgmnb);
+        printf("[INFO] Maximum number of bytes that can be written to queue: %d\n", info.msgmnb);
         printf("[INFO] Maximum bytes for single message: %d\n", info.msgmax);
-        printf("[MQ DS] Number of messages in queue: %lu\n", ds.msg_qnum);
-        printf("[MQ DS] Number of bytes in queue %lu\n", ds.__msg_cbytes);
-        printf("[MQ DS] Maximum bytes in queue: %lu\n", ds.msg_qbytes);
+        printf("[MQ DS] Current number of messages in queue: %lu\n", ds.msg_qnum);
+        printf("[MQ DS] Current number of bytes in queue %lu\n", ds.__msg_cbytes);
+        printf("[MQ DS] Maximum number of bytes allowed in queue: %lu\n", ds.msg_qbytes);
         printf("---------------------------------------------------------\n");
     }
 }
@@ -230,16 +231,20 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
         /* msg_type = 0 simply retrieves the first message in queue */
         ret = msgrcv(mqid, &message, MESSAGE_LEN, 0, mq_flag);
         error_code = errno;
-        if (ret == 0) {
+        if (ret == MESSAGE_LEN) {
             gettimeofday(&recv_time, NULL);
             fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
             if (debug) {
                 printf("Received: %s \n", message.payload);
             }
             ++must_stop;
+        } else if (ret == 0) {
+            // nothing in queue just keep looping
+        } else if (ret > 0) {
+           printf("[ERROR] %s: partial read detected: %d\n", __func__, ret);
         } else { // msgrcv returns error
             if (error_code == ENOMSG) {
-                continue;
+                printf("error_code = ENOMSG\n");
             } else if (error_code == EINVAL) {
                 printf("msgrcv: EINVAL\n");
             } else if (error_code == EFAULT) {
@@ -254,14 +259,19 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
                 printf("msgrcv: EAGAIN\n");
             } else if (error_code == EACCES) {
                 printf("msgrcv: EACCES\n");
+            }  else if (error_code == E2BIG) {
+                printf("msgrcv: E2BIG\n");
+            } else if (error_code == EINVAL) {
+                printf("msgrcv: EINVAL\n");
+            } else if (error_code == ENOSYS) {
+                printf("msgrcv: ENOSYS\n");
             }
-            printf("[%s %d] %s: %s (%d)\n", __FILE__, __LINE__, __func__, strerror(error_code), error_code);
             break;
         }
     }
     /* cleanup */
     fclose(out_fp);
-    display_mq_ds_info(mqid);
+    display_mq_ds_info();
     msgctl(mqid, IPC_RMID, NULL);
     printf("Server removing queue now!\n");
     remove(MQ_KEY_FILE);
