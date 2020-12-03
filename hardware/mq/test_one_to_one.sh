@@ -44,7 +44,7 @@ function run_cmd_back_ground()
 function run_sys_block()
 {
     run_cmd_back_ground "./sysV -e ${exe_cnt} -m serv -t recv -o ${sysBlockRecvTime} -b"
-    run_cmd_fore_ground "./sysV -e ${exe_cnt} -m cli -t send -o ${sysBlockSendTime}"
+    run_cmd_fore_ground "./sysV -e ${exe_cnt} -m cli -t send -o ${sysBlockSendTime} -b"
     run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${sysBlockSendTime} -r ${sysBlockRecvTime} -o ${sysBlockResult}"
 }
 
@@ -58,7 +58,7 @@ function run_sys_non_block()
 function run_pos_block()
 {
     run_cmd_back_ground "./posix -e ${exe_cnt} -m serv -t recv -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockRecvTime} -b"
-    run_cmd_fore_ground "./posix -e ${exe_cnt} -m cli -t send -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockSendTime}"
+    run_cmd_fore_ground "./posix -e ${exe_cnt} -m cli -t send -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockSendTime} -b"
     run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${posBlockSendTime} -r ${posBlockRecvTime} -o ${posBlockResult}"
 }
 

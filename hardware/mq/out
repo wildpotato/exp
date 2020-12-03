@@ -1,0 +1,22 @@
+---------------------------------------------
+./sysV -e 10000 -m serv -t recv -o sysBlockRecvTime.out -b
+---------------------------------------------
+---------------------------------------------
+./sysV -e 10000 -m cli -t send -o sysBlockSendTime.out -b
+[sysV.c 257] mq_run_server: Success (0)
+---------------------------------------------------------
+[INFO] Maximum number of entries in message map: 32
+[INFO] Maximum bytes a single message queue can contain: 16384
+[INFO] Maximum bytes for single message: 8192
+[MQ DS] Number of messages in queue: 32
+[MQ DS] Number of bytes in queue 16384
+[MQ DS] Maximum bytes in queue: 16384
+---------------------------------------------------------
+Server removing queue now!
+msgsnd: EIDRM
+[sysV.c 165] mq_run_client: Identifier removed (43)
+[ERROR] Something went wrong in this run!
+---------------------------------------------
+---------------------------------------------
+./compute -e 10000 -s sysBlockSendTime.out -r sysBlockRecvTime.out -o sysBlockResult.out
+---------------------------------------------

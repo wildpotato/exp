@@ -14,6 +14,30 @@ enum run_mode {SERV = 1, CLI = 2, ATTR = 3};
 enum time_type {AVG = 0, SEND = 1, RECV = 2};
 
 /*
+ * Note: Effetct of blocking/non-blocking on msgsnd() and msgrcv().
+ *
+ * If blocking is set, flag IPC_NOWAIT is specified during call to
+ * msgsnd() or msgrcv() depending on whether it's client or server.
+ *
+ * Specifically, IPC_NOWAIT has the following effects
+ *
+ *                            - client -
+ * Performs non-blocking send. If a message queue is full, msgsnd()
+ * blocks until enough space becomes available to allow the message to
+ * be placed on the queue. However, if the flag is spefied, then msgsnd()
+ * returns immediately with the error EAGAIN
+ *
+ *                            - server-
+ * Performs non-blocking recv so, when specified, msgrcv() returns immediately
+ * if no message matching msg_type is in the queue with erro ENOMSG (not EAGAIN)
+ *
+ * Both blocking msgsnd() and msgrcv(), when interrupted by a signal handler,
+ * fail with the error EINTR, regardless of the setting of SA_RESTART flag when
+ * the signal handler was established.
+ *
+ */
+
+/*
  * Note on MQ_FLAG for IPC message queue:
  * use 0 | IPC_NOWAIT | MSG_EXCEPT | MSG_NOERROR
  * IPC_NOWAIT:  performs non-blocking receive
@@ -23,7 +47,7 @@ enum time_type {AVG = 0, SEND = 1, RECV = 2};
  */
 
 #define MAX_FILE_NAME_LEN  32
-#define MSG_TYPE           0
+#define MSG_TYPE           1
 #define ITER_COUNT         1000000
 #define MAX_SIZE           1024
 #define MESSAGE_LEN        512
@@ -72,11 +96,12 @@ static inline key_t retrieve_key() {
     return key;
 }
 
-int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int debug) {
+int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int blocking, int debug) {
     struct timeval send_time;
     FILE *out_fp;
     key_t key;
-    int msgid;
+    int mqid;
+    int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
     int e = 0, i = 0, ret = -1, error_code = 0;
 
     key = retrieve_key();
@@ -84,14 +109,14 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
         return -1;
     }
 
-    /* msgget retrieves msgid from given key */
-    msgid = msgget(key, QUEUE_PERM | IPC_CREAT);
-    if (msgid == -1) {
-        printf("%s: msgid=-1 %s\n", __func__, strerror(errno));
+    /* msgget retrieves mqid from given key */
+    mqid = msgget(key, QUEUE_PERM | IPC_CREAT);
+    if (mqid == -1) {
+        printf("%s: mqid=-1 %s\n", __func__, strerror(errno));
         return -1;
     }
 
-    message.msg_type = 1; // must be greater than 0
+    message.msg_type = MSG_TYPE; // must be greater than 0
 
     out_fp = fopen(out_file, "w");
     if (out_fp == NULL) {
@@ -104,7 +129,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
         for (; e < exe_cnt; e++) {
             start = clock();
             for (i = 0; i != ITER_COUNT; i++) {
-                msgsnd(msgid, &message, MESSAGE_LEN, 0);
+                msgsnd(mqid, &message, MESSAGE_LEN, 0);
                 end = clock();
                 cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
                 fprintf(out_fp, "send time = %f\n", cpu_time_used);
@@ -115,7 +140,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
     } else if (type == SEND) {
         for (; e < exe_cnt;) {
             error_code = 0;
-            ret = msgsnd(msgid, &message, MESSAGE_LEN, 0);
+            ret = msgsnd(mqid, &message, MESSAGE_LEN, mq_flag);
             error_code = errno;
             if (ret == 0) {
                 gettimeofday(&send_time, NULL);
@@ -148,11 +173,32 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int de
     return 0;
 }
 
+static inline void display_mq_ds_info(int mqid) {
+    struct msginfo info;
+    struct msqid_ds ds;
+    int mq;
+    if ((mq = msgctl(0, MSG_INFO, (struct msqid_ds *) &info)) < 0) {
+        printf("[ERROR] msgctl info\n");
+    } else if (msgctl(mq, MSG_STAT, &ds) < 0) {
+        printf("[ERROR] msgctl MSG_STAT\n");
+    } else {
+        printf("---------------------------------------------------------\n");
+        printf("[INFO] Current number of queues on system: %d\n", info.msgpool);
+        printf("[INFO] Maximum number of entries in message map: %d\n", info.msgmap);
+        printf("[INFO] Maximum bytes a single message queue can contain: %d\n", info.msgmnb);
+        printf("[INFO] Maximum bytes for single message: %d\n", info.msgmax);
+        printf("[MQ DS] Number of messages in queue: %lu\n", ds.msg_qnum);
+        printf("[MQ DS] Number of bytes in queue %lu\n", ds.__msg_cbytes);
+        printf("[MQ DS] Maximum bytes in queue: %lu\n", ds.msg_qbytes);
+        printf("---------------------------------------------------------\n");
+    }
+}
+
 int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int blocking, int debug) {
     struct timeval recv_time;
     FILE *out_fp;
     key_t key;
-    int msgid;
+    int mqid;
     int must_stop = 0;
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
     int ret = -1;
@@ -173,15 +219,16 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
         } while (ret != 0);
     }
     /* msgget creates a message queue and returns identifier */
-    msgid = msgget(key, QUEUE_PERM | IPC_CREAT | IPC_EXCL);
-    if (msgid == -1) {
-        printf("%s: msgid=-1 %s\n", __func__, strerror(errno));
+    mqid = msgget(key, QUEUE_PERM | IPC_CREAT | IPC_EXCL);
+    if (mqid == -1) {
+        printf("%s: mqid=-1 %s\n", __func__, strerror(errno));
         return -1;
     }
     while (must_stop != exe_cnt) {
         ssize_t bytes_read = -1;
         int error_code = 0;
-        ret = msgrcv(msgid, &message, MESSAGE_LEN, MSG_TYPE, mq_flag);
+        /* msg_type = 0 simply retrieves the first message in queue */
+        ret = msgrcv(mqid, &message, MESSAGE_LEN, 0, mq_flag);
         error_code = errno;
         if (ret == 0) {
             gettimeofday(&recv_time, NULL);
@@ -214,7 +261,8 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     }
     /* cleanup */
     fclose(out_fp);
-    msgctl(msgid, IPC_RMID, NULL);
+    display_mq_ds_info(mqid);
+    msgctl(mqid, IPC_RMID, NULL);
     printf("Server removing queue now!\n");
     remove(MQ_KEY_FILE);
     return 0;
@@ -237,8 +285,8 @@ static void usage(const char *prog) {
     printf("\tavg  - if run as client, compute average send time\n");
     printf("\trecv - only used for server, timestamp after reception\n");
     printf("-------------------------------------------------------------------------\n");
-    printf("Example usage for server: %s -e 100 -m serv -t recv -o posixRecv.out\n", prog);
-    printf("Example usage for client: %s -e 100 -m cli -t send -o posixSend.out\n", prog);
+    printf("Example usage for server with blocking recv: %s -e 100 -m serv -t recv -o posixRecv.out -b\n", prog);
+    printf("Example usage for client with blocking send: %s -e 100 -m cli -t send -o posixSend.out -b\n", prog);
     printf("-------------------------------------------------------------------------\n");
 }
 
@@ -316,7 +364,7 @@ int main(int argc, char **argv)
     if (mode == SERV) {
         ret = mq_run_server(exe_cnt, type, out_file, blocking, debug_flag);
     } else if (mode == CLI) {
-        ret = mq_run_client(type, out_file, exe_cnt, debug_flag);
+        ret = mq_run_client(type, out_file, exe_cnt, blocking, debug_flag);
     } else if (mode == ATTR) {
 
     } else {
