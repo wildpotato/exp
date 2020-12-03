@@ -62,10 +62,10 @@ clock_t start, end;
 double cpu_time_used_avg = 0;
 double cpu_time_used;
 
-struct mesg_buffer {
+typedef struct mesg_buffer {
     long msg_type;
     char payload[PAYLOAD_SIZE];
-} message;
+} ds_message;
 
 static inline int store_key(key_t key) {
     FILE *fp;
@@ -100,6 +100,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
     struct timeval send_time;
     FILE *out_fp;
     key_t key;
+    ds_message message;
     int mqid;
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
     int e = 0, i = 0, ret = -1, error_code = 0;
@@ -198,6 +199,7 @@ static inline void display_mq_ds_info() {
 int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int blocking, int debug) {
     struct timeval recv_time;
     FILE *out_fp;
+    ds_message message;
     key_t key;
     int mqid;
     int must_stop = 0;
