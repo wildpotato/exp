@@ -103,7 +103,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
     ds_message message;
     int mqid;
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
-    int e = 0, i = 0, ret = -1, error_code = 0;
+    int iter = 0, i = 0, ret = -1, error_code = 0;
 
     key = retrieve_key();
     if (key == -1) {
@@ -127,7 +127,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
 
     memset(message.payload, '!', MESSAGE_LEN);
     if (type == AVG) {
-        for (; e < exe_cnt; e++) {
+        for (; iter < exe_cnt; iter++) {
             start = clock();
             for (i = 0; i != ITER_COUNT; i++) {
                 msgsnd(mqid, &message, MESSAGE_LEN, 0);
@@ -139,14 +139,14 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
             fprintf(out_fp, "average send time = %f\n", cpu_time_used_avg / exe_cnt);
         }
     } else if (type == SEND) {
-        for (; e < exe_cnt;) {
+        for (; iter < exe_cnt;) {
             error_code = 0;
-            gettimeofday(&send_time[e], NULL);
+            gettimeofday(&send_time[iter], NULL);
             ret = msgsnd(mqid, &message, MESSAGE_LEN, mq_flag);
             error_code = errno;
             if (ret == 0) {
-                fprintf(out_fp, "%ld %ld\n", send_time[e].tv_sec, send_time[e].tv_usec);
-                ++e;
+                fprintf(out_fp, "%ld %ld\n", send_time[iter].tv_sec, send_time[iter].tv_usec);
+                ++iter;
             } else { // msgsnd returns error
                 if (error_code == EAGAIN) {
                     printf("msgsnd: EAGAIN\n");
@@ -202,7 +202,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     ds_message message;
     key_t key;
     int mqid;
-    int must_stop = 0;
+    int iter = 0;
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
     int ret = -1;
 
@@ -227,19 +227,19 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
         printf("%s: mqid=-1 %s\n", __func__, strerror(errno));
         return -1;
     }
-    while (must_stop != exe_cnt) {
+    while (iter != exe_cnt) {
         ssize_t bytes_read = -1;
         int error_code = 0;
         /* msg_type = 0 simply retrieves the first message in queue */
         ret = msgrcv(mqid, &message, MESSAGE_LEN, 0, mq_flag);
-        gettimeofday(&recv_time[must_stop], NULL);
+        gettimeofday(&recv_time[iter], NULL);
         error_code = errno;
         if (ret == MESSAGE_LEN) {
-            fprintf(out_fp, "%ld %ld\n", recv_time[must_stop].tv_sec, recv_time[must_stop].tv_usec);
+            fprintf(out_fp, "%ld %ld\n", recv_time[iter].tv_sec, recv_time[iter].tv_usec);
             if (debug) {
                 printf("Received: %s \n", message.payload);
             }
-            ++must_stop;
+            ++iter;
         } else if (ret == 0) {
             // nothing in queue just keep looping
         } else if (ret > 0) {
@@ -273,9 +273,11 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     }
     /* cleanup */
     fclose(out_fp);
-    display_mq_ds_info();
+    if (debug) {
+        display_mq_ds_info();
+        printf("Server removing queue now!\n");
+    }
     msgctl(mqid, IPC_RMID, NULL);
-    printf("Server removing queue now!\n");
     remove(MQ_KEY_FILE);
     return 0;
 }
@@ -364,7 +366,6 @@ int main(int argc, char **argv)
                 usage(argv[0]);
                 return 0;
             default:
-                printf("[%s] Unrecognized option `\\x%x'\n", __FILE__, option);
                 usage(argv[0]);
                 return 1;
         } // switch
