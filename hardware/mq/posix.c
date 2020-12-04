@@ -33,7 +33,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
     mqd_t mq;
     struct mq_attr attr;
     char *buffer;
-    int must_stop = 0;
+    int iter = 0;
     buffer = malloc(msg_size);
     if (buffer == NULL) {
         perror("malloc");
@@ -65,7 +65,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
         return 1;
     }
     if (blocking) {
-        for (; must_stop < exe_cnt;) {
+        for (; iter < exe_cnt;) {
             size_t bytes_read = -1;
             bytes_read = mq_receive(mq, buffer, MESSAGE_LEN, NULL);
             if (bytes_read == MESSAGE_LEN && type == RECV) {
@@ -74,11 +74,11 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
                 if (debug) {
                     printf("[%s] Received: %s\n", __FILE__, buffer);
                 }
-                ++must_stop;
+                ++iter;
             }
         }
     } else {
-        while (must_stop != exe_cnt) {
+        while (iter != exe_cnt) {
             size_t bytes_read = -1;
             bytes_read = mq_receive(mq, buffer, MESSAGE_LEN, NULL);
             if (bytes_read == MESSAGE_LEN) {
@@ -87,7 +87,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
                 if (debug) {
                     printf("[%s] Received: %s\n", __FILE__, buffer);
                 }
-                ++must_stop;
+                ++iter;
             }
         }
     }
