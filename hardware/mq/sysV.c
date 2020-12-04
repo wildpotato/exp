@@ -97,7 +97,7 @@ static inline key_t retrieve_key() {
 }
 
 int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int blocking, int debug) {
-    struct timeval send_time;
+    struct timeval *send_time = malloc(exe_cnt * sizeof(struct timeval));
     FILE *out_fp;
     key_t key;
     ds_message message;
@@ -141,11 +141,11 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
     } else if (type == SEND) {
         for (; e < exe_cnt;) {
             error_code = 0;
+            gettimeofday(&send_time[e], NULL);
             ret = msgsnd(mqid, &message, MESSAGE_LEN, mq_flag);
             error_code = errno;
             if (ret == 0) {
-                gettimeofday(&send_time, NULL);
-                fprintf(out_fp, "%ld %ld\n", send_time.tv_sec, send_time.tv_usec);
+                fprintf(out_fp, "%ld %ld\n", send_time[e].tv_sec, send_time[e].tv_usec);
                 ++e;
             } else { // msgsnd returns error
                 if (error_code == EAGAIN) {
@@ -197,7 +197,7 @@ static inline void display_mq_ds_info() {
 }
 
 int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int blocking, int debug) {
-    struct timeval recv_time;
+    struct timeval *recv_time = malloc(exe_cnt * sizeof(struct timeval));
     FILE *out_fp;
     ds_message message;
     key_t key;
@@ -232,10 +232,10 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
         int error_code = 0;
         /* msg_type = 0 simply retrieves the first message in queue */
         ret = msgrcv(mqid, &message, MESSAGE_LEN, 0, mq_flag);
+        gettimeofday(&recv_time[must_stop], NULL);
         error_code = errno;
         if (ret == MESSAGE_LEN) {
-            gettimeofday(&recv_time, NULL);
-            fprintf(out_fp, "%ld %ld\n", recv_time.tv_sec, recv_time.tv_usec);
+            fprintf(out_fp, "%ld %ld\n", recv_time[must_stop].tv_sec, recv_time[must_stop].tv_usec);
             if (debug) {
                 printf("Received: %s \n", message.payload);
             }
