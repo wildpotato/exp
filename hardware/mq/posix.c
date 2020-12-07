@@ -137,7 +137,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
     free(recv_time);
     free(buffer);
     CHECK((mqd_t)-1 != mq_close(mq));
-    CHECK((mqd_t)-1 != mq_unlink(QUEUE_NAME));
+    //CHECK((mqd_t)-1 != mq_unlink(QUEUE_NAME));
 
     return 0;
 }
