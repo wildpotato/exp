@@ -7,12 +7,12 @@
 #define MAX_FILE_NAME_LEN  32
 #define ONE_MILLION   1000000
 
-enum queue_type{systemV = 1, POSIX = 2};
+enum time_type{ONE2ONE = 1, AVG = 2};
 
 static void usage(const char *prog) {
-    printf("%s --execution-count <numOfExecution> --send-time-input <sendFileName> --receive-time-input <receiveFileName> --elapsed-time-output <outFileName> --system-V|--posix \n", prog);
-    printf("Example usage on system V: %s -e 100 -s sysVSend.out -r sysVRecv.out -o result.out -v\n", prog);
-    printf("Example usage on POSIX: %s -e 100 -s posixSend.out -r posixRecv.out -o result.out -p\n", prog);
+    printf("%s --execution-count <numOfExecution> --send-time-input <sendFileName> --receive-time-input <receiveFileName> --elapsed-time-output <outFileName> --mode <timeMode> \n", prog);
+    printf("Example usage on one-to-one: %s -e 100 -s sysVSend.out -r sysVRecv.out -o result.out -m one2one\n", prog);
+    printf("Example usage on average: %s -e 100 -s posixSend.out -r posixRecv.out -o result.out -m avg\n", prog);
 }
 
 static float getAvgUsecElapsed(long long int totalUsecElapsed, int count) {
@@ -20,14 +20,14 @@ static float getAvgUsecElapsed(long long int totalUsecElapsed, int count) {
     return avg_usec_elapsed;
 }
 
-void processFiles(char old_file[], char new_file[], int count, enum queue_type mode, char out_file[]) {
+void processFiles(char old_file[], char new_file[], int count, enum time_type mode, char out_file[]) {
     FILE *old_fp, *new_fp, *out_fp;
     struct timeval old_time, new_time;
     long long int total_elapsed_usec = 0;
     float avg_elapsed_usec = 0.0;
     long int sec = 0, usec = 0;
     long int elapsed_usec = 0;
-    int i = 0;
+    int i = mode == AVG ? count - 1 : 0;
     old_fp = fopen(old_file, "r");
     new_fp = fopen(new_file, "r");
     out_fp = fopen(out_file, "w");
@@ -42,7 +42,7 @@ void processFiles(char old_file[], char new_file[], int count, enum queue_type m
         total_elapsed_usec += elapsed_usec;
     } // for
     avg_elapsed_usec = getAvgUsecElapsed(total_elapsed_usec, count);
-    fprintf(out_fp, "Total usecs elapsed: %lld (count=%d)\n", total_elapsed_usec, count);
+    fprintf(out_fp, "Total usecs elapsed: %lld (exe_cnt=%d)\n", total_elapsed_usec, count);
     fprintf(out_fp, "Average elapsed usecs per operation: %f\n", avg_elapsed_usec);
     fclose(out_fp);
     fclose(old_fp);
@@ -56,8 +56,7 @@ int main(int argc, char **argv) {
         { "send-time-input", required_argument, NULL, 's'     },
         { "receive-time-input", required_argument, NULL, 'r'  },
         { "elapsed-time-output", required_argument, NULL, 'o' },
-        { "system-V", no_argument, NULL, 'v'                  },
-        { "posix", no_argument, NULL, 'p'                     },
+        { "mode", no_argument, NULL, 'm'                      },
         { "help", no_argument, NULL, 'h'                      },
         { NULL, 0, NULL, '\0'} };
 
@@ -66,9 +65,9 @@ int main(int argc, char **argv) {
     char send_file_name[MAX_FILE_NAME_LEN];
     char recv_file_name[MAX_FILE_NAME_LEN];
     char output_file_name[MAX_FILE_NAME_LEN];
-    enum queue_type mode;
+    enum time_type mode;
     int opt_flag = 0;
-    while ((option = getopt_long(argc, argv, "e:s:r:o:vph", longOpts,
+    while ((option = getopt_long(argc, argv, "e:s:r:o:m:h", longOpts,
                 &option_index)) != -1) {
         opt_flag = 1;
         switch (option) {
@@ -83,11 +82,16 @@ int main(int argc, char **argv) {
                 break;
             case 'o':
                 strcpy(output_file_name, optarg);
-            case 'v':
-                mode = systemV;
                 break;
-            case 'p':
-                mode = POSIX;
+            case 'm':
+                if (strcmp("one2one", optarg) == 0) {
+                    mode = ONE2ONE;
+                } else if (strcmp("avg", optarg) == 0) {
+                    mode = AVG;
+                } else {
+                    printf("[ERROR] Unsupported mode, please use serv/cli/attr\n");
+                    return 1;
+                }
                 break;
             case 'h':
                 usage(argv[0]);
