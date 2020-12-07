@@ -68,14 +68,35 @@ static inline const char *get_error_str(int errno_no) {
     } // switch
 }
 
+void write_timestamp_to_file(enum time_type type, const char *out_file, const struct timeval *timestamp, int exe_cnt) {
+    int iter = 0;
+    FILE *out_fp = fopen(out_file, "w");
+    if (out_fp == NULL) {
+        printf("[ERROR] failed opening file %s\n", out_file);
+    }
+    if (type == AVG) {
+        fprintf(out_fp, "%ld %ld\n", timestamp->tv_sec, timestamp->tv_usec);
+    } else if (type == SEND || type == RECV) {
+        for (; iter != exe_cnt; ++iter) {
+            fprintf(out_fp, "%ld %ld\n", timestamp[iter].tv_sec, timestamp[iter].tv_usec);
+        }
+    }
+    fclose(out_fp);
+    return;
+}
+
 int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int blocking, int debug)
 {
-    struct timeval *recv_time;
+    struct timeval *recv_time = NULL;
     mqd_t mq;
     struct mq_attr attr;
     char *buffer;
     int iter = 0;
-    recv_time = malloc(exe_cnt * sizeof(struct timeval));
+    if (type == AVG) {
+        recv_time = malloc(sizeof(struct timeval));
+    } else if (type == RECV) {
+        recv_time = malloc(exe_cnt * sizeof(struct timeval));
+    }
     buffer = malloc(msg_size);
     if (buffer == NULL || recv_time == NULL) {
         perror("malloc");
@@ -101,39 +122,50 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
     }
     CHECK((mqd_t)-1 != mq);
 
-    /* open output file for write */
-    for (; iter < exe_cnt;) {
-        size_t bytes_read = -1;
-        bytes_read = mq_receive(mq, buffer, msg_size, NULL);
-        gettimeofday(&recv_time[iter], NULL);
-        if (bytes_read == MESSAGE_LEN && type == RECV) {
-            if (debug) {
-                printf("[%s] Received: %s\n", __FILE__, buffer);
+    if (type == RECV) {
+        for (; iter < exe_cnt;) {
+            size_t bytes_read = -1;
+            bytes_read = mq_receive(mq, buffer, msg_size, NULL);
+            gettimeofday(&recv_time[iter], NULL);
+            if (bytes_read == MESSAGE_LEN) {
+                if (debug) {
+                    printf("[%s] Received: %s\n", __FILE__, buffer);
+                }
+                ++iter;
+            } else if (bytes_read == 0) {
+                // nothing in queue just keep looping
+            } else {
+                if (!blocking && errno == EAGAIN) {
+                    continue;
+                }
+                printf("mq_receive: [%s] %s\n", get_error_str(errno), strerror(errno));
+                return 1;
             }
-            ++iter;
-        } else if (bytes_read == 0) {
-            // nothing in queue just keep looping
-        } else {
-            if (!blocking && errno == EAGAIN) {
-                continue;
+        } // for
+    } else if (type == AVG) {
+        for (; iter < exe_cnt;) {
+            size_t bytes_read = -1;
+            bytes_read = mq_receive(mq, buffer, msg_size, NULL);
+            if (bytes_read == MESSAGE_LEN) {
+                if (debug) {
+                    printf("[%s] Received: %s\n", __FILE__, buffer);
+                }
+                ++iter;
+            } else if (bytes_read == 0) {
+                // nothing in queue just keep looping
+            } else {
+                if (!blocking && errno == EAGAIN) {
+                    continue;
+                }
+                printf("mq_receive: [%s] %s\n", get_error_str(errno), strerror(errno));
+                return 1;
             }
-            printf("mq_receive: [%s] %s\n", get_error_str(errno), strerror(errno));
-            return 1;
-        }
+        } // for
+        gettimeofday(recv_time, NULL);
     }
-    /* write recv timestamp to file */
-    FILE *out_fp = fopen(out_file, "w");
-    if (out_fp == NULL) {
-        printf("[ERROR] failed opening file %s\n", out_file);
-        return 1;
-    }
-    for (iter = 0; iter != exe_cnt; ++iter) {
-        fprintf(out_fp, "%ld %ld\n", recv_time[iter].tv_sec, recv_time[iter].tv_usec);
-
-    }
+    write_timestamp_to_file(type, out_file, recv_time, exe_cnt);
 
     /* cleanup */
-    fclose(out_fp);
     free(recv_time);
     free(buffer);
     CHECK((mqd_t)-1 != mq_close(mq));
@@ -144,22 +176,17 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const 
 
 int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int blocking, int debug)
 {
-    /* used for computing average send time (type == AVG) */
-    clock_t start, end;
     struct mq_attr attr;
-    double cpu_time_used_avg = 0;
-    double cpu_time_used;
-
+    struct timeval *send_time = NULL;
     mqd_t mq = -1;
     char *buffer;
     int iter = 0, i = 0;
     int ret = -1;
 
-    /* used for timestamping send time (type == SEND) */
-    struct timeval *send_time = malloc(exe_cnt * sizeof(struct timeval));
-    if (send_time == NULL) {
-        perror("malloc");
-        return 1;
+    if (type == AVG) { // used for computing average send time
+        send_time = malloc(sizeof(struct timeval));
+    } else if (type == SEND) { // used for timestamping send time
+        send_time = malloc(exe_cnt * sizeof(struct timeval));
     }
     buffer = malloc(msg_size);
     if (buffer == NULL || send_time == NULL) {
@@ -193,15 +220,19 @@ int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const 
     }
 
     if (type == AVG) {
-        for (; iter < exe_cnt; ++iter) {
-            start = clock();
-            for (; i < ITER_COUNT; ++i) {
-                mq_send(mq, buffer, msg_size, 0);
+        gettimeofday(send_time, NULL);
+        for (; iter < exe_cnt;) {
+            ret = mq_send(mq, buffer, MESSAGE_LEN, 0);
+            if (ret == 0) {
+                ++iter;
+            } else {
+                if (!blocking && errno == EAGAIN) {
+                    continue;
+                }
+                printf("mq_send: [%s] %s\n", get_error_str(errno), strerror(errno));
+                return -1;
             }
-            end = clock();
-            cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-            cpu_time_used_avg += cpu_time_used;
-        }
+        } // for
     } else if (type == SEND) {
         for (; iter < exe_cnt;) {
             gettimeofday(&send_time[iter], NULL);
@@ -220,17 +251,9 @@ int mq_run_client(int exe_cnt, enum time_type type, const char *out_file, const 
         printf("[ERROR] client incompatible with type recv, use send/avg instead\n");
         return 1;
     }
-    /* write send timestamp to out file */
-    FILE *out_fp = fopen(out_file, "w");
-    if (out_fp == NULL) {
-        printf("[ERROR] failed opening file %s\n", out_file);
-        return 1;
-    }
-    for (iter = 0; iter != exe_cnt; ++iter) {
-        fprintf(out_fp, "%ld %ld\n", send_time[iter].tv_sec, send_time[iter].tv_usec);
-    }
+    write_timestamp_to_file(type, out_file, send_time, exe_cnt);
+
     /* cleanup */
-    fclose(out_fp);
     free(send_time);
     CHECK((mqd_t)-1 != mq_close(mq));
     mq_unlink(QUEUE_NAME);
@@ -346,7 +369,6 @@ int main(int argc, char **argv)
                 usage(argv[0]);
                 exit(0);
             default:
-                printf("Unrecognized option `\\x%x'\n", option);
                 usage(argv[0]);
                 exit(0);
         } // switch

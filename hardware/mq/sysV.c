@@ -121,15 +121,37 @@ static inline key_t retrieve_key() {
     return key;
 }
 
+void write_timestamp_to_file(enum time_type type, const char *out_file, const struct timeval *timestamp, int exe_cnt) {
+    int iter = 0;
+    FILE *out_fp = fopen(out_file, "w");
+    if (out_fp == NULL) {
+        printf("[ERROR] failed opening file %s\n", out_file);
+    }
+    if (type == AVG) {
+        fprintf(out_fp, "%ld %ld\n", timestamp->tv_sec, timestamp->tv_usec);
+    } else if (type == SEND || type == RECV) {
+        for (; iter != exe_cnt; ++iter) {
+            fprintf(out_fp, "%ld %ld\n", timestamp[iter].tv_sec, timestamp[iter].tv_usec);
+        }
+    }
+    fclose(out_fp);
+    return;
+}
+
 int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int blocking, int debug) {
-    struct timeval *send_time = malloc(exe_cnt * sizeof(struct timeval));
+    struct timeval *send_time = NULL;
     FILE *out_fp;
     key_t key;
     ds_message message;
     int mqid;
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
-    int iter = 0, i = 0, ret = -1, error_code = 0;
+    int iter = 0, i = 0, ret = -1;
 
+    if (type == AVG) {
+        send_time = malloc(sizeof(struct timeval));
+    } else if (type == SEND) {
+        send_time = malloc(exe_cnt * sizeof(struct timeval));
+    }
     if (send_time == NULL) {
         perror("malloc");
         return 1;
@@ -149,49 +171,43 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
     message.msg_type = MSG_TYPE; // must be greater than 0
     memset(message.payload, '!', MESSAGE_LEN);
     if (type == AVG) {
-        for (; iter < exe_cnt; iter++) {
-            start = clock();
-            for (i = 0; i != ITER_COUNT; i++) {
-                msgsnd(mqid, &message, MESSAGE_LEN, 0);
-                end = clock();
-                cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-                fprintf(out_fp, "send time = %f\n", cpu_time_used);
-                cpu_time_used_avg += cpu_time_used;
-            }
-            fprintf(out_fp, "average send time = %f\n", cpu_time_used_avg / exe_cnt);
-        }
-    } else if (type == SEND) {
+        gettimeofday(send_time, NULL);
         for (; iter < exe_cnt;) {
-            error_code = 0;
-            gettimeofday(&send_time[iter], NULL);
             ret = msgsnd(mqid, &message, MESSAGE_LEN, mq_flag);
-            error_code = errno;
             if (ret == 0) {
                 ++iter;
             } else { // msgsnd returns error
-                if (!blocking && error_code == EAGAIN) {
+                if (!blocking && errno == EAGAIN) {
                     continue;
                 }
                 /* all other types of error are considered bugs and are handled here */
-                printf("msgsnd: [%s] %s\n", get_error_str(error_code), strerror(error_code));
+                printf("msgsnd: [%s] %s\n", get_error_str(errno), strerror(errno));
                 return -1;
             }
-        }
-        /* write send timestamp to file */
-        out_fp = fopen(out_file, "w");
-        if (out_fp == NULL) {
-            printf("[ERROR] failed opening file %s\n", out_file);
-            return -1;
-        }
-        for (iter = 0; iter != exe_cnt; ++iter) {
-            fprintf(out_fp, "%ld %ld\n", send_time[iter].tv_sec, send_time[iter].tv_usec);
-        }
-        fclose(out_fp);
-        free(send_time);
+        } // for
+    } else if (type == SEND) {
+        for (; iter < exe_cnt;) {
+            gettimeofday(&send_time[iter], NULL);
+            ret = msgsnd(mqid, &message, MESSAGE_LEN, mq_flag);
+            if (ret == 0) {
+                ++iter;
+            } else { // msgsnd returns error
+                if (!blocking && errno == EAGAIN) {
+                    continue;
+                }
+                /* all other types of error are considered bugs and are handled here */
+                printf("msgsnd: [%s] %s\n", get_error_str(errno), strerror(errno));
+                return -1;
+            }
+        } // for
     } else {
         printf("[ERROR] client incompatible with type recv, use send/avg instead\n");
         return 1;
     }
+    write_timestamp_to_file(type, out_file, send_time, exe_cnt);
+
+    /* cleanup */
+    free(send_time);
     return 0;
 }
 
@@ -218,7 +234,7 @@ static inline void display_mq_ds_info() {
 }
 
 int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int blocking, int debug) {
-    struct timeval *recv_time = malloc(exe_cnt * sizeof(struct timeval));
+    struct timeval *recv_time = NULL;
     FILE *out_fp;
     ds_message message;
     key_t key;
@@ -226,6 +242,16 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
     int iter = 0;
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
     int ret = -1;
+
+    if (type == AVG) {
+        recv_time = malloc(sizeof(struct timeval));
+    } else if (type == RECV) {
+        recv_time = malloc(exe_cnt * sizeof(struct timeval));
+    }
+    if (recv_time == NULL) {
+        perror("malloc");
+        return 1;
+    }
 
     /* ftok to generate unique key */
     key = ftok(PATH, PROJECT_ID);
@@ -243,42 +269,58 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
         printf("%s: mqid=-1 %s\n", __func__, strerror(errno));
         return -1;
     }
-    while (iter != exe_cnt) {
-        ssize_t bytes_read = -1;
-        int error_code = 0;
-        /* msg_type = 0 simply retrieves the first message in queue */
-        ret = msgrcv(mqid, &message, MESSAGE_LEN, 0, mq_flag);
-        gettimeofday(&recv_time[iter], NULL);
-        error_code = errno;
-        if (ret == MESSAGE_LEN) {
-            if (debug) {
-                printf("Received: %s \n", message.payload);
+    if (type == AVG) {
+        while (iter != exe_cnt) {
+            ssize_t bytes_read = -1;
+            /* msg_type = 0 simply retrieves the first message in queue */
+            ret = msgrcv(mqid, &message, MESSAGE_LEN, 0, mq_flag);
+            if (ret == MESSAGE_LEN) {
+                if (debug) {
+                    printf("Received: %s \n", message.payload);
+                }
+                ++iter;
+            } else if (ret == 0) {
+                // nothing in queue just keep looping
+            } else if (ret > 0) {
+               printf("[ERROR] %s: partial read detected: %d\n", __func__, ret);
+            } else { // msgrcv returns error
+                if (!blocking && errno == ENOMSG) {
+                    continue;
+                }
+                /* all other types of error are considered bugs and are handled here */
+                printf("msgrcv: [%s] %s\n", get_error_str(errno), strerror(errno));
+                break;
             }
-            ++iter;
-        } else if (ret == 0) {
-            // nothing in queue just keep looping
-        } else if (ret > 0) {
-           printf("[ERROR] %s: partial read detected: %d\n", __func__, ret);
-        } else { // msgrcv returns error
-            if (!blocking && error_code == ENOMSG) {
-                continue;
+        }
+        gettimeofday(recv_time, NULL);
+    } else if (type == RECV) {
+        while (iter != exe_cnt) {
+            ssize_t bytes_read = -1;
+            /* msg_type = 0 simply retrieves the first message in queue */
+            ret = msgrcv(mqid, &message, MESSAGE_LEN, 0, mq_flag);
+            gettimeofday(&recv_time[iter], NULL);
+            if (ret == MESSAGE_LEN) {
+                if (debug) {
+                    printf("Received: %s \n", message.payload);
+                }
+                ++iter;
+            } else if (ret == 0) {
+                // nothing in queue just keep looping
+            } else if (ret > 0) {
+               printf("[ERROR] %s: partial read detected: %d\n", __func__, ret);
+            } else { // msgrcv returns error
+                if (!blocking && errno == ENOMSG) {
+                    continue;
+                }
+                /* all other types of error are considered bugs and are handled here */
+                printf("msgrcv: [%s] %s\n", get_error_str(errno), strerror(errno));
+                break;
             }
-            /* all other types of error are considered bugs and are handled here */
-            printf("msgrcv: [%s] %s\n", get_error_str(error_code), strerror(error_code));
-            break;
         }
     }
-    /* write timestamps to file */
-    out_fp = fopen(out_file, "w");
-    if (out_fp == NULL) {
-        printf("[ERROR] failed opening file %s\n", out_file);
-        return -1;
-    }
-    for (iter = 0; iter != exe_cnt; ++iter) {
-        fprintf(out_fp, "%ld %ld\n", recv_time[iter].tv_sec, recv_time[iter].tv_usec);
-    }
+    write_timestamp_to_file(type, out_file, recv_time, exe_cnt);
+
     /* cleanup */
-    fclose(out_fp);
     free(recv_time);
     if (debug) {
         display_mq_ds_info();
