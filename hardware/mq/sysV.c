@@ -130,6 +130,10 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
     int mq_flag = blocking == 1 ? 0 : IPC_NOWAIT;
     int iter = 0, i = 0, ret = -1, error_code = 0;
 
+    if (send_time == NULL) {
+        perror("malloc");
+        return 1;
+    }
     key = retrieve_key();
     if (key == -1) {
         return -1;
