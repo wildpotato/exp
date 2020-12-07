@@ -77,9 +77,9 @@ function run_setup()
     cd ${LOGDIR}
 }
 
-run_setup
+run_setup &&
 run_sys_block &&
-run_sys_non_block
-#run_pos_block
-#run_pos_non_block
+run_sys_non_block &&
+run_pos_block &&
+run_pos_non_block &&
 cd ${DIR}
