@@ -45,28 +45,28 @@ function run_sys_block()
 {
     run_cmd_back_ground "./sysV -e ${exe_cnt} -m serv -t recv -o ${sysBlockRecvTime} -b"
     run_cmd_fore_ground "./sysV -e ${exe_cnt} -m cli -t send -o ${sysBlockSendTime} -b"
-    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${sysBlockSendTime} -r ${sysBlockRecvTime} -o ${sysBlockResult}"
+    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${sysBlockSendTime} -r ${sysBlockRecvTime} -o ${sysBlockResult} -m one2one"
 }
 
 function run_sys_non_block()
 {
     run_cmd_back_ground "./sysV -e ${exe_cnt} -m serv -t recv -o ${sysNonBlockRecvTime}"
     run_cmd_fore_ground "./sysV -e ${exe_cnt} -m cli -t send -o ${sysNonBlockSendTime}"
-    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${sysNonBlockSendTime} -r ${sysNonBlockRecvTime} -o ${sysNonBlockResult}"
+    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${sysNonBlockSendTime} -r ${sysNonBlockRecvTime} -o ${sysNonBlockResult} -m one2one"
 }
 
 function run_pos_block()
 {
     run_cmd_back_ground "./posix -e ${exe_cnt} -m serv -t recv -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockRecvTime} -b"
     run_cmd_fore_ground "./posix -e ${exe_cnt} -m cli -t send -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockSendTime} -b"
-    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${posBlockSendTime} -r ${posBlockRecvTime} -o ${posBlockResult}"
+    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${posBlockSendTime} -r ${posBlockRecvTime} -o ${posBlockResult} -m one2one"
 }
 
 function run_pos_non_block()
 {
     run_cmd_back_ground "./posix -e ${exe_cnt} -m serv -t recv -s ${pq_msg_size} -n ${pq_max_num} -o ${posNonBlockRecvTime}"
     run_cmd_fore_ground "./posix -e ${exe_cnt} -m cli -t send -s ${pq_msg_size} -n ${pq_max_num} -o ${posNonBlockSendTime}"
-    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${posNonBlockSendTime} -r ${posNonBlockRecvTime} -o ${posNonBlockResult}"
+    run_cmd_fore_ground "./compute -e ${exe_cnt} -s ${posNonBlockSendTime} -r ${posNonBlockRecvTime} -o ${posNonBlockResult} -m one2one"
 }
 
 function run_setup()
@@ -77,9 +77,14 @@ function run_setup()
     cd ${LOGDIR}
 }
 
-run_setup &&
-run_sys_block &&
-run_sys_non_block &&
-run_pos_block &&
-run_pos_non_block &&
-cd ${DIR}
+function run_one_to_one()
+{
+    run_setup &&
+    run_sys_block &&
+    run_sys_non_block &&
+    run_pos_block &&
+    run_pos_non_block &&
+    cd ${DIR}
+}
+
+run_one_to_one
