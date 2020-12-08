@@ -23,7 +23,7 @@ posBlockResult=posBlockResult.out
 coreCnt=`nproc --all`
 TASKSET0="taskset -c 0"
 TASKSET1="taskset -c 0"
-if [ ${coreCnt} > 1 ];then
+if [ ${coreCnt} -gt 1 ];then
     TASKSET1="taskset -c 1"
 fi
 

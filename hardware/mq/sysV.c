@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <time.h>
@@ -53,9 +55,9 @@ enum time_type {AVG = 0, SEND = 1, RECV = 2};
 #define MESSAGE_LEN        512
 #define QUEUE_PERM         0666
 #define PAYLOAD_SIZE       MAX_SIZE - sizeof(long)
-#define PATH               "/var/tmp/progfile"
+#define PATH               "/tmp/sysV.tmp"
 #define PROJECT_ID         65
-#define MQ_KEY_FILE        "mq_key_file"
+#define MQ_KEY_FILE        "/tmp/mq_key_file"
 
 /* these vars are used to calculate average send time only */
 clock_t start, end;
@@ -66,6 +68,16 @@ typedef struct mesg_buffer {
     long msg_type;
     char payload[PAYLOAD_SIZE];
 } ds_message;
+
+static bool is_file_exists(const char *path) {
+    struct stat st;
+    if (!stat(path, &st)) {
+        if (S_ISREG(st.st_mode)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 static inline const char *get_error_str(int error_no) {
     switch (error_no) {
@@ -423,6 +435,15 @@ int main(int argc, char **argv)
         usage(argv[0]);
         return 1;
     }
+
+    if (!is_file_exists(PATH)) {
+        FILE *fd = NULL;
+        fd = fopen(PATH, "w");
+        if (fd != NULL) {
+            fclose(fd);
+        }
+    }
+
     if (mode == SERV) {
         ret = mq_run_server(exe_cnt, type, out_file, blocking, debug_flag);
     } else if (mode == CLI) {
@@ -434,7 +455,7 @@ int main(int argc, char **argv)
         return 1;
     }
     if (ret != 0) {
-        printf("[ERROR] Something went wrong in this run!\n");
+        printf("[ERROR] Something went wrong in this run! ret = %d\n", ret);
     }
     return 0;
 }

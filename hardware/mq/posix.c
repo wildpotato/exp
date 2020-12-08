@@ -388,7 +388,7 @@ int main(int argc, char **argv)
         return 1;
     }
     if (ret != 0) {
-        printf("[ERROR] Something went wrong in this run!\n");
+        printf("[ERROR] Something went wrong in this run! ret = %d\n", ret);
     }
     return 0;
 }
