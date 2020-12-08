@@ -6,7 +6,7 @@ if [ ! -d ${LOGDIR} ]; then
     mkdir -p ${LOGDIR}
 fi
 
-exe_cnt=10000
+exe_cnt=1000000
 pq_msg_size=1024     # posix queue message size
 pq_max_num=10        # posix queue max number of messages on queue
 
