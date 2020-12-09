@@ -301,7 +301,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
                 }
                 /* all other types of error are considered bugs and are handled here */
                 printf("msgrcv: [%s] %s\n", get_error_str(errno), strerror(errno));
-                break;
+                return -1;
             }
         }
         gettimeofday(recv_time, NULL);
@@ -326,7 +326,7 @@ int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, int bl
                 }
                 /* all other types of error are considered bugs and are handled here */
                 printf("msgrcv: [%s] %s\n", get_error_str(errno), strerror(errno));
-                break;
+                return -1;
             }
         }
     }
