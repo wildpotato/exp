@@ -56,10 +56,10 @@ function run_sys_block()
     local cnt=$1
     local type=$2
 
-    if [ ${type} == "avg" ]; then 
+    if [ ${type} == "avg" ]; then
         run_cmd_back_ground "${TASKSET0} ./sysV -e ${cnt} -m serv -t avg -o ${sysBlockRecvTime} -b"
         run_cmd_fore_ground "${TASKSET1} ./sysV -e ${cnt} -m cli -t avg -o ${sysBlockSendTime} -b"
-    else 
+    else
         run_cmd_back_ground "${TASKSET0} ./sysV -e ${cnt} -m serv -t recv -o ${sysBlockRecvTime} -b"
         run_cmd_fore_ground "${TASKSET1} ./sysV -e ${cnt} -m cli -t send -o ${sysBlockSendTime} -b"
     fi
@@ -76,7 +76,7 @@ function run_sys_non_block()
     local cnt=$1
     local type=$2
 
-    if [ ${type} == "avg" ]; then 
+    if [ ${type} == "avg" ]; then
         run_cmd_back_ground "${TASKSET0} ./sysV -e ${cnt} -m serv -t avg -o ${sysNonBlockRecvTime}"
         run_cmd_fore_ground "${TASKSET1} ./sysV -e ${cnt} -m cli -t avg -o ${sysNonBlockSendTime}"
     else
@@ -84,7 +84,7 @@ function run_sys_non_block()
         run_cmd_fore_ground "${TASKSET1} ./sysV -e ${cnt} -m cli -t send -o ${sysNonBlockSendTime}"
     fi
     run_cmd_fore_ground "./compute -e ${cnt} -s ${sysNonBlockSendTime} -r ${sysNonBlockRecvTime} -o ${sysNonBlockResult} -m ${type}"
-    cat ${sysNonBlockResult} 
+    cat ${sysNonBlockResult}
 }
 
 function run_pos_block()
@@ -96,7 +96,7 @@ function run_pos_block()
     local cnt=$1
     local type=$2
 
-    if [ ${type} == "avg" ]; then 
+    if [ ${type} == "avg" ]; then
         run_cmd_back_ground "${TASKSET0} ./posix -e ${cnt} -m serv -t avg -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockRecvTime} -b"
         run_cmd_fore_ground "${TASKSET1} ./posix -e ${cnt} -m cli -t avg -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockSendTime} -b"
     else
@@ -116,7 +116,7 @@ function run_pos_non_block()
     local cnt=$1
     local type=$2
 
-    if [ ${type} == "avg" ]; then 
+    if [ ${type} == "avg" ]; then
         run_cmd_back_ground "${TASKSET0} ./posix -e ${cnt} -m serv -t avg -s ${pq_msg_size} -n ${pq_max_num} -o ${posNonBlockRecvTime}"
         run_cmd_fore_ground "${TASKSET1} ./posix -e ${cnt} -m cli -t avg -s ${pq_msg_size} -n ${pq_max_num} -o ${posNonBlockSendTime}"
     else
@@ -179,12 +179,13 @@ do
             shift
             if [ $1 == "detail" ]; then
                 TestType="one2one"
-            else 
+            else
                 TestType="avg"
             fi
             ;;
         -h)
             Usage
+            exit
             ;;
     esac
     shift
@@ -196,11 +197,11 @@ if [ -z "${TestCase}" ] || [ -z "${TestType}" ]; then
 fi
 
 # ----------------------------------------------------------------------
-# main 
+# main
 # ----------------------------------------------------------------------
 run_setup ${TestType}
 
-case ${TestCase} in 
+case ${TestCase} in
     ipcq)
         run_sys_non_block ${exe_cnt} ${TestType}
         ;;
