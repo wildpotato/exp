@@ -1,5 +1,6 @@
 #include <sys/time.h>
 #include <stdio.h>
+#include <unistd.h>
 
 /*
  *  struct timeval {
@@ -10,8 +11,12 @@
 
 int main() {
     struct timeval current_time;
-    gettimeofday(&current_time, NULL);
-    printf("seconds: %ld\nmicro seconds: %ld\n",
+    int iter = 1000000, i = 0;
+    for (; i < iter; ++i) {
+        gettimeofday(&current_time, NULL);
+        printf("%010ld%06ld\n",
             current_time.tv_sec, current_time.tv_usec);
+        usleep(1);
+    }
     return 0;
 }
