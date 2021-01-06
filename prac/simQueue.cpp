@@ -9,7 +9,6 @@
 
 #include <iostream>
 using std::cout;
-using std::endl;
 
 #include <vector>
 using std::vector;
@@ -21,6 +20,9 @@ using std::deque;
 using std::pair;
 using std::make_pair;
 
+#include <numeric>
+using std::accumulate;
+
 #include <ctime>
 #include <cstdlib>
 
@@ -30,11 +32,12 @@ using std::make_pair;
 #include <unistd.h>
 #endif
 
-void printQueue(deque<pair<time_t, long>> &q, int iter, time_t now) {
+void printQueue(deque<pair<time_t, long>> &q, int iter, long sum, time_t now) {
     cout << "------ queue during the " << iter << " iteration ------ \n";
-    cout << "current time = " << now << endl;
+    cout << "current time = " << now << "\n";
+    cout << "current sum of all quantity in queue = " << sum << "\n";
     for (const auto p : q) {
-        cout << "time:" << p.first << " qty:" << p.second << endl;
+        cout << "time:" << p.first << " qty:" << p.second << "\n";
     }
     cout << "------ queue during the " << iter << " iteration ------ \n";
 }
@@ -46,7 +49,6 @@ int main() {
     constexpr int MIN_QTY = -6; // min quantity of each transaction
     constexpr int TIME_WINDOW = 3; // only keep the transactions in the last TIME_WINDOW seconds
     time_t now = 0;
-    long sum = 0; // sum of all quantities in the last TIME_WINDOW seconds
     deque<pair<time_t, long>> que; // que stores pair of (time_t, qty) for each transaction
     vector<int> freq(DURATION, 0); // freq stores how many transactions occur within each second
 
@@ -60,7 +62,11 @@ int main() {
         for (int j = 0; j < freq[i]; ++j) {
             que.push_back(make_pair(now, rand() % (MAX_QTY+abs(MIN_QTY)) - MAX_QTY));
         }
-        printQueue(que, i+1, now);
+        long sum = 0; // sum of all quantities in the last TIME_WINDOW seconds
+        for (const auto &p : que) {
+            sum += p.second;
+        }
+        printQueue(que, i+1, sum, now);
         sleep(1);
     }
     return 0;
