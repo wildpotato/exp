@@ -6,7 +6,7 @@ import pprint
 class LogParser:
     """
     Simple parser that parses input log file based on the user defined criteria and
-    stores the conetents that satisfied said criteria into the output file which is
+    stores the conetents that satisfy said criteria into the output file which is
     also specified by the user.
 
     Assumptions:
@@ -25,18 +25,25 @@ class LogParser:
     """
 
     def __init__(self, args):
+        self.cache_line_out = 100
+        self.timestamp_len = 8
+        self.total_out_line = 0
+        self.is_right_time = False
+        self.is_over_time = False
+        self.first_write = True
         self.valid_timestamp = []
         self.out_lines = []
         self.input = args.input
         self.output = args.output
         self.start_time = args.start_timestamp
         self.duration = args.duration
-        self.verbose = args.verbosity_level
+        self.verbose = int(args.verbosity_level) if args.verbosity_level is not None else -1
 
     def __str__(self):
         return f"Log(in={self.input}, out={self.output}, start={self.start_time}, duration={self.duration})"
 
     def getValidTimestamps(self):
+        """ computes all valid seconds in timestamp """
         curr_time = self.start_time
         d = int(self.duration)
         if d >= 0:
@@ -49,28 +56,55 @@ class LogParser:
         if self.verbose > 0:
             pprint.pprint(self.valid_timestamp)
 
+    def isValidLine(self, line):
+        """ a valid line is a line of log that originated during desired time """
+        # the case when a line is too short
+        if len(str(line)) < self.timestamp_len:
+            return self.is_right_time
+        try:
+            time = line.decode("utf-8")[0:self.timestamp_len]
+        except:
+            return self.is_right_time
+        if self.verbose > 1:
+            print(time)
+            print("total line = ", self.total_out_line)
+        # line is long enough, check if it starts with valid timestamp
+        if self.__class__.isValidTime(time):
+            # bingo
+            if time in self.valid_timestamp:
+                self.is_right_time = True
+                return True
+            # not right time
+            if self.is_right_time:
+                self.is_right_time = False
+                self.is_over_time = True
+            return False
+        # line does not start with valid timestamp
+        return self.is_right_time
+
     def parseLines(self):
-        is_right_time = False
         with open(self.input, "rb") as in_fp:
-            lines = in_fp.readlines()
-            for line in lines:
-                time = line[0:8].decode("utf-8")
-                if self.__class__.isValidTime(time):
-                    #print(time)
-                    if time in self.valid_timestamp:
-                        is_right_time = True
-                        self.out_lines.append(line)
-                    else:
-                        is_right_time = False
-                else:
-                    if is_right_time:
-                        self.out_lines.append(line)
-        in_fp.close()
+            while (not self.is_over_time):
+                line = in_fp.readline()
+                if self.verbose > 2:
+                    print(line)
+                if self.isValidLine(line):
+                    self.total_out_line += 1
+                    self.out_lines.append(line)
+                if len(self.out_lines) == self.cache_line_out:
+                    self.writeOutFile()
+                    self.first_write = False
+                    self.out_lines = []
+            self.writeOutFile()
+        in_fp.close
 
     def writeOutFile(self):
-        with open(self.output, "wb") as out_fp:
-            for out_line in self.out_lines:
-                out_fp.write(out_line)
+        if self.first_write:
+            options = "wb"
+        else:
+            options = "ba+"
+        with open(self.output, options) as out_fp:
+            out_fp.writelines(self.out_lines)
         out_fp.close()
 
     @classmethod
@@ -119,10 +153,10 @@ class LogParser:
         """ add argument parser """
         parser = argparse.ArgumentParser()
         parser.add_argument("-i", "--input", help="input file name")
-        parser.add_argument("-s", "--start_timestamp", help="starting time")
+        parser.add_argument("-s", "--start_timestamp", help="starting time must be in HH:MM:SS format")
         parser.add_argument("-o", "--output", help="output file name")
-        parser.add_argument("-d", "--duration", type=int, help="duration after starting time")
-        parser.add_argument("-v", "--verbosity_level", default=0, help="verbosity level: 0 is off")
+        parser.add_argument("-d", "--duration", type=int, help="duration after starting time (in seconds)")
+        parser.add_argument("-v", "--verbosity_level", default=0, help="verbosity level: 0 is OFF (any positive integer is ON)")
         return parser
 
 
@@ -133,7 +167,6 @@ def main():
     #print(l.__repr__())
     l.getValidTimestamps()
     l.parseLines()
-    l.writeOutFile()
 
 if __name__ == "__main__":
     main()
