@@ -37,6 +37,7 @@ class LogParser:
         self.output = args.output
         self.start_time = args.start_timestamp
         self.duration = args.duration
+        self.key = args.keyword if args.keyword is not None else None
         self.verbose = int(args.verbosity_level) if args.verbosity_level is not None else -1
 
     def __str__(self):
@@ -82,13 +83,26 @@ class LogParser:
         # line does not start with valid timestamp
         return self.is_right_time
 
+    def containsKey(self, line):
+        if self.key is not None:
+            try:
+                line = line.decode("utf-8")
+                if self.key in line:
+                    return True
+                return False
+            except:
+                if (self.verbose > 1):
+                    print("Unable to decode line: ", line)
+                return True
+        return True
+
     def parseLines(self):
         with open(self.input, "rb") as in_fp:
             while (not self.is_over_time):
                 line = in_fp.readline()
                 if self.verbose > 2:
                     print(line)
-                if self.isValidLine(line):
+                if self.isValidLine(line) and self.containsKey(line):
                     self.total_out_line += 1
                     self.out_lines.append(line)
                 if len(self.out_lines) == self.cache_line_out:
@@ -156,6 +170,7 @@ class LogParser:
         parser.add_argument("-s", "--start_timestamp", help="starting time must be in HH:MM:SS format")
         parser.add_argument("-o", "--output", help="output file name")
         parser.add_argument("-d", "--duration", type=int, help="duration after starting time (in seconds)")
+        parser.add_argument("-k", "--keyword", default=None ,help="only retain log lines that contain the keyword")
         parser.add_argument("-v", "--verbosity_level", default=0, help="verbosity level: 0 is OFF (any positive integer is ON)")
         return parser
 
