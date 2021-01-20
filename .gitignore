@@ -8,3 +8,4 @@ bench
 **.d
 hardware/mq/posix
 hardware/mq/sysV
+log/YT_EmgCliLog.txt
