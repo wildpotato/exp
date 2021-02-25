@@ -68,7 +68,7 @@ function run_sys_block()
         type="one2one"
     fi
     run_cmd_fore_ground "./compute -e ${cnt} -s ${sysBlockSendTime} -r ${sysBlockRecvTime} -o ${sysBlockResult} -m ${type} -d ${round}"
-    cat ${sysBlockResult}
+    #cat ${sysBlockResult}
 }
 
 function run_sys_non_block()
@@ -91,7 +91,7 @@ function run_sys_non_block()
         type="one2one"
     fi
     run_cmd_fore_ground "./compute -e ${cnt} -s ${sysNonBlockSendTime} -r ${sysNonBlockRecvTime} -o ${sysNonBlockResult} -m ${type} -d ${round}"
-    cat ${sysNonBlockResult}
+    #cat ${sysNonBlockResult}
 }
 
 function run_pos_block()
@@ -111,7 +111,7 @@ function run_pos_block()
         run_cmd_fore_ground "${TASKSET1} ./posix -e ${cnt} -m cli -t send -s ${pq_msg_size} -n ${pq_max_num} -o ${posBlockSendTime} -b"
     fi
     run_cmd_fore_ground "./compute -e ${cnt} -s ${posBlockSendTime} -r ${posBlockRecvTime} -o ${posBlockResult} -m ${type}"
-    cat ${posBlockResult}
+    #cat ${posBlockResult}
 }
 
 function run_pos_non_block()
@@ -131,7 +131,7 @@ function run_pos_non_block()
         run_cmd_fore_ground "${TASKSET1} ./posix -e ${cnt} -m cli -t send -s ${pq_msg_size} -n ${pq_max_num} -o ${posNonBlockSendTime}"
     fi
     run_cmd_fore_ground "./compute -e ${cnt} -s ${posNonBlockSendTime} -r ${posNonBlockRecvTime} -o ${posNonBlockResult} -m ${type}"
-    cat ${posNonBlockResult}
+    #cat ${posNonBlockResult}
 }
 
 function run_setup()
