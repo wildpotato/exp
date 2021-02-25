@@ -100,6 +100,7 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
     if (type == AVG) {
         for ( ; curr_round < round; ++curr_round) {
             gettimeofday(send_time[curr_round], NULL);
+            //printf("client write time %ld %ld in round %d\n", send_time[curr_round]->tv_sec, send_time[curr_round]->tv_usec, curr_round);
             for (int j = 0; j < exe_cnt;) {
                 ret = msgsnd(mqid, &message, MESSAGE_LEN, mq_flag);
                 if (ret == 0) {
@@ -142,6 +143,8 @@ int mq_run_client(enum time_type type, const char *out_file, int exe_cnt, int bl
         printf("[ERROR] client incompatible with type recv, use send/avg instead\n");
         return 1;
     }
+
+    /* write timestamps to files */
     for (int i = 0; i < round; ++i) {
         char *round_out_file = get_indexed_filename(out_file, i);
         write_timestamp_to_file(type, round_out_file, send_time[i], exe_cnt);
@@ -324,18 +327,23 @@ void mq_print_attr()
 
 static void usage(const char *prog) {
     printf("-------------------------------------------------------------------------\n");
-    printf("%s --execution-count <execCnt> --mode <mode> --timing-type <type> --output-file <fileName> [--blocking] --round <num_of_rounds> [--debug-flag]\n", prog);
-    printf("mode:\n");
+    printf("%s -e <exe_cnt> -m <mode> -t <type> -o <output_file_name> [-b] -d <num_of_rounds> [-g]\n", prog);
+    printf("--mode (-m):\n");
     printf("\tserv  - run as server\n");
     printf("\tcli   - run as client\n");
     printf("\tattr  - check attribute of the message queue\n");
-    printf("timing-type:\n");
+    printf("--timing-type (-t):\n");
     printf("\tsend  - if run as client, timestamp right before send\n");
     printf("\tavg   - if run as client, compute average send time\n");
     printf("\trecv  - only used for server, timestamp after reception\n");
+    printf("--execution-count (-e):\n");
+    printf("--round (-d):\n");
+    printf("--debug_flag (-g):\n");
+    printf("--blocking (-b):\n");
+    printf("--help (-h):\n");
     printf("-------------------------------------------------------------------------\n");
-    printf("Example usage for server with blocking recv: %s -e 100 -m serv -t recv -o posixRecv.out -b\n", prog);
-    printf("Example usage for client with blocking send: %s -e 100 -m cli -t send -o posixSend.out -b\n", prog);
+    printf("Example usage for server with blocking recv: %s -e 100 -m serv -t recv -o posixRecv.out -b -d 10\n", prog);
+    printf("Example usage for client with blocking send: %s -e 100 -m cli -t send -o posixSend.out -b -d 10\n", prog);
     printf("-------------------------------------------------------------------------\n");
 }
 

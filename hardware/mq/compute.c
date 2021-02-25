@@ -26,6 +26,7 @@ float processFiles(char old_file[], char new_file[], int count, int curr_round, 
     long int elapsed_usec = 0;
     int i = mode == ALLINONE ? count - 1 : 0;
 
+    // prepare files
     old_fp = fopen(old_file, "r");
     new_fp = fopen(new_file, "r");
     out_fp = fopen(out_file, "w");
@@ -33,6 +34,8 @@ float processFiles(char old_file[], char new_file[], int count, int curr_round, 
         printf("[ERR] Open file failed\n");
         return -1;
     }
+
+    // do the calculation
     for (; i < count; ++i) {
         fscanf(old_fp, "%ld", &old_time.tv_sec);
         fscanf(old_fp, "%ld", &old_time.tv_usec);
@@ -45,8 +48,11 @@ float processFiles(char old_file[], char new_file[], int count, int curr_round, 
     } // for
     printf("round total elapsed usec: %lld  ", total_elapsed_usec);
     avg_elapsed_usec = getAvgUsecElapsed(total_elapsed_usec, count);
+
     fprintf(out_fp, "Total usecs elapsed: %lld (exe_cnt=%d)\n", total_elapsed_usec, count);
     fprintf(out_fp, "Average elapsed usecs per operation: %f (round = %d)\n", avg_elapsed_usec, curr_round);
+
+    // cleanup
     fclose(out_fp);
     fclose(old_fp);
     fclose(new_fp);

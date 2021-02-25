@@ -1,3 +1,6 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -39,6 +42,7 @@ void write_timestamp_to_file(enum time_type type, const char *out_file, const st
         printf("[ERROR] failed opening file %s\n", out_file);
     }
     if (type == AVG) {
+        //printf("writing time %ld %ld to file %s\n", timestamp->tv_sec, timestamp->tv_usec, out_file);
         fprintf(out_fp, "%ld %ld\n", timestamp->tv_sec, timestamp->tv_usec);
     } else if (type == SEND || type == RECV) {
         for (; iter != exe_cnt; ++iter) {
@@ -126,3 +130,5 @@ key_t retrieve_key(const char *key_file_path) {
     fclose(fp);
     return key;
 }
+
+#endif

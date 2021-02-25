@@ -61,9 +61,11 @@ function run_sys_block()
     if [ ${type} == "avg" ]; then
         run_cmd_back_ground "${TASKSET0} ./sysV -e ${cnt} -m serv -t avg -o ${sysBlockRecvTime} -b -d ${round}"
         run_cmd_fore_ground "${TASKSET1} ./sysV -e ${cnt} -m cli -t avg -o ${sysBlockSendTime} -b -d ${round}"
+        type="allinone"
     else
         run_cmd_back_ground "${TASKSET0} ./sysV -e ${cnt} -m serv -t recv -o ${sysBlockRecvTime} -b -d ${round}"
         run_cmd_fore_ground "${TASKSET1} ./sysV -e ${cnt} -m cli -t send -o ${sysBlockSendTime} -b -d ${round}"
+        type="one2one"
     fi
     run_cmd_fore_ground "./compute -e ${cnt} -s ${sysBlockSendTime} -r ${sysBlockRecvTime} -o ${sysBlockResult} -m ${type} -d ${round}"
     cat ${sysBlockResult}
@@ -82,9 +84,11 @@ function run_sys_non_block()
     if [ ${type} == "avg" ]; then
         run_cmd_back_ground "${TASKSET0} ./sysV -e ${cnt} -m serv -t avg -o ${sysNonBlockRecvTime} -d ${round}"
         run_cmd_fore_ground "${TASKSET1} ./sysV -e ${cnt} -m cli -t avg -o ${sysNonBlockSendTime} -d  ${round}"
+        type="allinone"
     else
         run_cmd_back_ground "${TASKSET0} ./sysV -e ${cnt} -m serv -t recv -o ${sysNonBlockRecvTime} -d ${round}"
         run_cmd_fore_ground "${TASKSET1} ./sysV -e ${cnt} -m cli -t send -o ${sysNonBlockSendTime} -d ${round}"
+        type="one2one"
     fi
     run_cmd_fore_ground "./compute -e ${cnt} -s ${sysNonBlockSendTime} -r ${sysNonBlockRecvTime} -o ${sysNonBlockResult} -m ${type} -d ${round}"
     cat ${sysNonBlockResult}
@@ -188,7 +192,7 @@ do
             if [ $1 == "detail" ]; then
                 TestType="one2one"
             else
-                TestType="allinone"
+                TestType="avg"
             fi
             ;;
         -r )
