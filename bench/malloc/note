@@ -1,0 +1,3 @@
+Shared object: need to export to env path
+$ export LD_LIBRARY_PATH=./:./lib/:$LD_LIBRARY_PATH (add to env path)
+$ env | grep LIB (check LIB)
