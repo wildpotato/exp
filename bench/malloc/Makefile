@@ -1,5 +1,8 @@
 EXECUTABLE = bench_malloc
 CXX = g++
+LIB=-L$(shell pwd)/lib
+$(info $$LIB is [${LIB}])
+INC=-I../mimalloc/include -I../gperftools/src/gperftools
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:%.cpp=%.o)
 CXXFLAGS = -std=c++17 -Wall -O3
@@ -12,11 +15,11 @@ ifeq ($(EXECUTABLE), executable)
 	@echo Using default a.out.
 	$(CXX) $(CXXFLAGS) $(OBJECTS)
 else
-	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $(EXECUTABLE)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) $(LIB) -lmimalloc -ltcmalloc -o $(EXECUTABLE)
 endif
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $*.cpp
+	$(CXX) $(CXXFLAGS) $(INC) -c $*.cpp
 
 clean:
 	rm -f $(OBJECTS) $(EXECUTABLE) a.out
