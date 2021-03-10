@@ -5,7 +5,7 @@ $(info $$LIB is [${LIB}])
 INC=-I../mimalloc/include -I../gperftools/src/gperftools -I../matplotlib-cpp
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:%.cpp=%.o)
-CXXFLAGS = -std=c++17 -Wall -O3
+CXXFLAGS = -std=c++17 -Wno-conversion -Wall -O3
 
 #############################################################################
 #  This section is for building the `matplotlib-cpp` which uses Python
@@ -33,7 +33,7 @@ ifeq ($(EXECUTABLE), executable)
 	@echo Using default a.out.
 	$(CXX) $(CXXFLAGS) $(OBJECTS)
 else
-	$(CXX) $(CXXFLAGS) $(OBJECTS) $(LIB) -lmimalloc -ltcmalloc -o $(EXECUTABLE)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) $(LIB) $(LDFLAGS) -lmimalloc -ltcmalloc -o $(EXECUTABLE)
 endif
 
 %.o: %.cpp
