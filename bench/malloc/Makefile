@@ -5,7 +5,7 @@ $(info $$LIB is [${LIB}])
 INC=-I../mimalloc/include -I../gperftools/src/gperftools -I../matplotlib-cpp
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:%.cpp=%.o)
-CXXFLAGS = -std=c++17 -Wno-conversion -Wall -O3
+CXXFLAGS = -std=c++17 -Wno-conversion -Wall
 
 #############################################################################
 #  This section is for building the `matplotlib-cpp` which uses Python
