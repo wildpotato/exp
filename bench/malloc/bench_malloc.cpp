@@ -17,12 +17,12 @@ enum Mode {
 };
 
 constexpr int one_million = 1e6;
-constexpr int number_of_sets = 1e6;
+constexpr int number_of_sets = one_million * 10;
 constexpr int regular_ascii_code = 128;
 
 class Test {
     public:
-        Test(enum Mode m, int i, int sz) : mode(m), iter(i), size(sz) { time.resize(size); }
+        Test(enum Mode m, int i, int sz) : mode(m), iter(i), size(sz) { time.resize(iter); }
         void run() {
             switch (mode) {
                 case MALLOC:
@@ -38,6 +38,12 @@ class Test {
                     std::cout << "[ERR] invalid mode\n";
                     break;
             }
+        }
+        void dbg_print_time() {
+            for (auto t : time) {
+                std::cout << t << " ";
+            }
+            std::cout << "\n" << "size = " << time.size() << "\n";
         }
         enum Mode mode;
         int iter;
@@ -71,9 +77,11 @@ class Test {
         }
 };
 
-void plot(Test *t) {
-    std::vector<int> x (t->size, 0);
-    plt::plot(x, t->time, "o");
+void plot(std::vector<Test *>t) {
+    //t->dbg_print_time();
+    plt::named_plot("malloc", t[0]->time, "b");
+    plt::plot(t[1]->time, "r");
+    plt::plot(t[2]->time, "k");
     plt::show();
 }
 
@@ -89,6 +97,6 @@ int main() {
     for (auto t : tests) {
         t->run();
     }
-    plot(tests[0]);
+    plot(tests);
     return 0;
 }
