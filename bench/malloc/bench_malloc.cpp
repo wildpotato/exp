@@ -80,19 +80,23 @@ class Test {
 void plot(std::vector<Test *>t) {
     //t->dbg_print_time();
     plt::named_plot("malloc", t[0]->time, "b");
-    plt::plot(t[1]->time, "r");
-    plt::plot(t[2]->time, "k");
+    plt::named_plot("tc_malloc", t[1]->time, "r");
+    plt::named_plot("mi_malloc", t[2]->time, "k");
+    plt::xlabel("alloc/dealloc");
+    plt::ylabel("time (usec)");
+    plt::title("benchmark");
+    plt::legend();
     plt::show();
 }
 
 int main() {
     constexpr int iteration = 100;
-    constexpr int size = 8192;
+    constexpr int size = 102400;
     std::vector<Test *> tests;
     tests.resize(3);
-    tests[0] = new Test(MALLOC, iteration, size);
-    tests[1] = new Test(TC_MALLOC, iteration, size);
-    tests[2] = new Test(MI_MALLOC, iteration, size);
+    tests[1] = new Test(MALLOC, iteration, size);
+    tests[2] = new Test(TC_MALLOC, iteration, size);
+    tests[0] = new Test(MI_MALLOC, iteration, size);
 
     for (auto t : tests) {
         t->run();
