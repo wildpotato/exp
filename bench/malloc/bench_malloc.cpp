@@ -78,7 +78,6 @@ class Test {
 };
 
 void plot(std::vector<Test *>t) {
-    //t->dbg_print_time();
     plt::named_plot("malloc", t[0]->time, "b");
     plt::named_plot("tc_malloc", t[1]->time, "r");
     plt::named_plot("mi_malloc", t[2]->time, "k");
@@ -101,6 +100,11 @@ int main() {
     for (auto t : tests) {
         t->run();
     }
+
     plot(tests);
+
+    for (auto t: tests) {
+        delete t;
+    }
     return 0;
 }
