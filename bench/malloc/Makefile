@@ -2,7 +2,8 @@ EXECUTABLE = bench_malloc
 CXX = g++
 LIB=-L$(shell pwd)/lib
 $(info $$LIB is [${LIB}])
-INC=-I../mimalloc/include -I../gperftools/src/gperftools -I../matplotlib-cpp
+#INC=-I../mimalloc/include -I../gperftools/src/gperftools -I../matplotlib-cpp
+INC=-I./include
 SOURCES = $(wildcard *.cpp)
 OBJECTS = $(SOURCES:%.cpp=%.o)
 CXXFLAGS = -std=c++17 -Wno-conversion -Wall
