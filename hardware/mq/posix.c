@@ -1,20 +1,7 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <errno.h>
 #include <mqueue.h>
-#include <time.h>
-#include <sys/time.h>
-#include <getopt.h>
 
-enum run_mode {SERV = 1, CLI = 2, ATTR = 3};
-enum time_type {AVG = 0, SEND = 1, RECV = 2};
+#include "utils.h"
 
-#define MAX_FILE_NAME_LEN  32
-#define MESSAGE_LEN        512
-#define ITER_COUNT         1000000
 #define QUEUE_NAME         "/test_posix_queue"
 #define QUEUE_PERM         0660
 
@@ -34,56 +21,6 @@ enum time_type {AVG = 0, SEND = 1, RECV = 2};
  * blocking, the call will fail immediately with the error EAGAIN.
  *
  */
-
-static inline const char *get_error_str(int errno_no) {
-    switch (errno_no) {
-        case EINVAL:
-            return "EINVAL";
-
-        /* errors returned by mq_open() */
-        case EACCES:
-            return "EACCES";
-        case EEXIST:
-            return "EEXIST";
-        case ENOMEM:
-            return "ENOMEM";
-        case ENOSPC:
-           return "ENOSPC";
-        case EMFILE:
-           return "EMFILE";
-        case ENOENT:
-           return "ENOENT";
-
-        /* errors returned by mq_send() and mq_receive() */
-        case EAGAIN:
-           return "EAGAIN";
-        case EBADF:
-           return "EBADF";
-        case EINTR:
-           return "EINTR";
-        case EMSGSIZE:
-           return "EMSGSIZE";
-        case ETIMEDOUT:
-           return "ETIMEDOUT";
-    } // switch
-}
-
-void write_timestamp_to_file(enum time_type type, const char *out_file, const struct timeval *timestamp, int exe_cnt) {
-    int iter = 0;
-    FILE *out_fp = fopen(out_file, "w");
-    if (out_fp == NULL) {
-        printf("[ERROR] failed opening file %s\n", out_file);
-    }
-    if (type == AVG) {
-        fprintf(out_fp, "%ld %ld\n", timestamp->tv_sec, timestamp->tv_usec);
-    } else if (type == SEND || type == RECV) {
-        for (; iter != exe_cnt; ++iter) {
-            fprintf(out_fp, "%ld %ld\n", timestamp[iter].tv_sec, timestamp[iter].tv_usec);
-        }
-    }
-    fclose(out_fp);
-    return;
-}
 
 int mq_run_server(int exe_cnt, enum time_type type, const char *out_file, const int msg_size, const int max_msgs, int blocking, int debug)
 {

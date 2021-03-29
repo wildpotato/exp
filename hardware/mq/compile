@@ -1,0 +1,2 @@
+gcc sysV.c -o sysV
+gcc     compute.c   -o compute

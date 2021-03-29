@@ -1,0 +1,6 @@
+**.o
+**.d
+**.a
+compile
+bench_malloc
+!.gitignore

@@ -2,9 +2,9 @@ benchmark*/
 **.log
 a.out
 **.swp
-bench
 **.o
 **.a
 **.d
 hardware/mq/posix
 hardware/mq/sysV
+log/YT_EmgCliLog.txt
