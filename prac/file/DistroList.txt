@@ -1,0 +1,16 @@
+Fedora
+Ubuntu
+Debian
+Linux Mint
+Arch Linux
+Solus
+Kali Linux
+CentOS
+Pop!_OS
+Manjaro
+MX Linux
+Xubuntu
+Parrot
+Tails
+PureOS
+Raspbian
