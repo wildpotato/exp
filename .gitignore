@@ -1,5 +1,7 @@
 benchmark*/
 **.log
+log/*
+!log/*.py
 a.out
 **.swp
 **.o

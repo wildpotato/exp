@@ -14,9 +14,9 @@
 <footer>
 <p><strong>Third Party Libraries:</strong></p>
   <nav>
-    <li><p><a href="https://github.com/gperftools/gperftools">gperftools (tcmalloc)</a></p></li>
-    <li><p><a href="https://github.com/microsoft/mimalloc">mimalloc</a></p></li>
-    <li><p><a href="https://github.com/lava/matplotlib-cpp">matplotlib-cpp</a></p></li>
+    <li><a href="https://github.com/gperftools/gperftools">gperftools (tcmalloc)</a></li>
+    <li><a href="https://github.com/microsoft/mimalloc">mimalloc</a></li>
+    <li><a href="https://github.com/lava/matplotlib-cpp">matplotlib-cpp</a></li>
   </nav>
 </footer>
 </html>

@@ -1,3 +1,11 @@
+/*
+ *  Reserve: Attempt to reserve semaphore for exclusive use. If the semaphore is already
+ *           reserved by another process, then block until the semaphore is released.
+ *
+ *  Release: Free a currently reserved semaphore, so that it can be reserved by another
+ *           process.
+ *
+ */
 #ifndef BINARY_SEMS_H
 #define BINARY_SEMS_H
 
