@@ -54,11 +54,13 @@ void NuCQClose(NuCQ_t *cq);
 int NuCQEnqueue(NuCQ_t *cq, const char *item, size_t len);
 int NuCQDequeue(NuCQ_t *cq, char *out, size_t *len);
 
-inline bool NuCQIsFull(NuCQ_t *cq) {
+NU_ATTR_INLINE 
+static inline bool NuCQIsFull(NuCQ_t *cq) {
     return (cq->Idx[cq->hdr.end].nextIdx == &(cq->Idx[cq->hdr.begin])) ? true : false;
 }
 
-inline bool NuCQIsEmpty(NuCQ_t *cq) {
+NU_ATTR_INLINE 
+static inline bool NuCQIsEmpty(NuCQ_t *cq) {
     return (cq->Idx[cq->hdr.begin].nextIdx == &(cq->Idx[cq->hdr.end])) ? true : false;
 }
 

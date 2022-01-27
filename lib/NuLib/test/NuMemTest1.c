@@ -21,7 +21,7 @@ void Test1(NuMemory_t *mem) {
 }
 
 void Test2(NuMemory_t *mem) {
-    char data[16] = {0};
+    char data[17] = {0};
     int len = 0;
     int i = 0;
 

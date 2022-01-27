@@ -1,5 +1,6 @@
 
 #include "NuCommon.h"
+#include "NuUtil.h"
 
 #ifndef _NUMEMORY_H
 #define _NUMEMORY_H
@@ -24,7 +25,11 @@ typedef struct _NuMemory_t {
 int  NuMemoryNew(NuMemory_t **mem, size_t initCap);
 void NuMemoryFree(NuMemory_t *mem);
 
-inline void NuMemoryClear(NuMemory_t *mem) { mem->length = 0; }
+NU_ATTR_INLINE 
+static inline void NuMemoryClear(NuMemory_t *mem) { 
+	mem->length = 0; 
+}
+
 int NuMemoryAppend(NuMemory_t *mem, void *data, size_t dataLen);
 
 #ifdef __cplusplus
