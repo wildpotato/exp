@@ -11,7 +11,7 @@ int main() {
         v += 0.5;
         cout << v << " ";
     }
-    double sum = accumulate(vec.begin(), vec.end(), 0.1);
+    double sum = accumulate(vec.begin(), vec.end(), 0.0);
     cout << endl << "sum = " << sum << endl;
     return 0;
 }

@@ -2,7 +2,7 @@ import re
 
 _HEADER_NAME = "tbl_itoa.h"
 _MIN_INT = 0
-_MAX_INT = 9
+_MAX_INT = 9999
 TAB = "    "
 
 class GenerateHeader():

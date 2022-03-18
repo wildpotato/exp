@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <unordered_map>
 #include <chrono>
+#include <algorithm>
 
 #include "tbl_itoa.h"
 
@@ -22,41 +23,39 @@ private:
     std::chrono::time_point<clock_> beg_;
 };
 
-/* fast number to string convert */
-#define NumTable    "0123456789"
-#define NumCopyToStr(T, S, V, L) do { \
-    unsigned int _idx = L; \
-    T _val = V; \
-    do{ \
-        V = _val/10; \
-        S[_idx - 1]=NumTable[(_val - V *10)]; \
-        _val = V; \
-        --_idx; \
-    } while(_idx>0); \
-} while(0)
-
-int NuUIntCopyToLPadZero(char *str, unsigned int val, int padLen)
+// convert unsigned int to c-string, no null at end, return position after last char
+template<typename Uint_type> char *ez_utoa(Uint_type number, char *output)
 {
-    NumCopyToStr(unsigned int, str, val, padLen);
-    return padLen;
+    char *b = output;
+    do {
+		std::cout << "*b=" << *b << std::endl;
+        *b++ = '0' + (number % 10);
+        number /= 10;
+    } while(number);
+
+    // Reverse the digits in-place.
+    std::reverse(output, b);
+    return b;
 }
 
 int main(int argc, char **argv)
 {
 	const int C_STR_SZ = 10;
-	const int N = 1e1;
-	const int MAX_INT = 9;
-	char *c_str_arr[MAX_INT+1];
+	const int MAX_INT = 9999;
+	char ** c_str_arr = (char **) malloc((MAX_INT + 1) * sizeof(char *));
 	Timer timer;
 	double t1, t2;
-	char *c_str = (char *) malloc(sizeof(char) * C_STR_SZ);
+
+	for (int i = 0; i <= MAX_INT; ++i)
+	{
+		c_str_arr[i] = (char *) malloc(C_STR_SZ * sizeof(char));
+	}
 
 	timer.reset();
 	// Benchmark approach 1
-	std::cout << t1 << std::endl;
-	for (int i = 0; i < N; ++i)
+	for (int i = 0; i < MAX_INT; ++i)
 	{
-		c_str = m_itoa[i];
+		c_str_arr[i] = m_itoa[i];
 	}
 	t1 = timer.elapsed();
 
@@ -64,9 +63,9 @@ int main(int argc, char **argv)
 
 	// Benchmark appraoch 2
 	timer.reset();
-	for (unsigned int i = 0; i < N; ++i)
+	for (unsigned int i = 0; i < MAX_INT; ++i)
 	{
-		NuUIntCopyToLPadZero(c_str, i, 0);
+		ez_utoa(i, c_str_arr[i]);
 	}
 	t2 = timer.elapsed();
 	std::cout << "Approach 2: " << t2 << std::endl;
