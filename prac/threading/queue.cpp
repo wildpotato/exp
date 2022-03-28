@@ -5,7 +5,16 @@
 
 using namespace std;
 
-CircularBuffer<int> cbuf(2);
+/* debug notes:
+ *
+ * Run command
+ *
+ * $ awk `!seen[$0]++` filename
+ *
+ * to remove redundant lines in file filename
+ */
+
+CircularBuffer<int> cbuf(5);
 
 void t1_func() {
 	for (int i = 0; i < 10; ++i) {
@@ -29,9 +38,10 @@ void t2_func() {
 
 void t3_func() {
 	for (int i = 0; i < 100; ++i) {
-		std::pair<int, int> val = cbuf.peekFirstNLast();
-		cout << "First item: " << val.first << "   ";
-		cout << "Last Item: " << val.second << "\n";
+		cbuf.printAll();
+		//std::pair<int, int> val = cbuf.peekFirstNLast();
+		//cout << "First item: " << val.first << "   ";
+		//cout << "Last Item: " << val.second << "\n";
 		this_thread::sleep_for(chrono::duration<int, milli>(100));
 	}
 	cout << "Bye thread 3\n";
