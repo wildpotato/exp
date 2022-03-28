@@ -1,4 +1,5 @@
 #include <mutex>
+#include <memory>
 #include <iostream>
 
 using std::cout;
@@ -10,7 +11,10 @@ public:
 		_buf(std::unique_ptr<T[]>(new T[size])),
 		_maxSz(size) {}
 
-	/* produces element and put onto the ring pointed to by _head pointer */
+	/*
+	 * Puts item into the buffer
+	 * updates internal _head and _tail pointer accordingly
+	 */
 	void put(T item)
 	{
 		std::scoped_lock<std::mutex> lck(_mtx);
@@ -22,7 +26,8 @@ public:
 		return;
 	}
 
-	/* consumes the element pointed to by _tail pointer
+	/*
+	 * Consumes the element pointed to by _tail pointer
 	 * THIS FUNCTION STILL NEEDS TO BE TESTED BEFORE USE!
 	 */
 	T get()
@@ -37,8 +42,10 @@ public:
 	}
 
 	/*
-	 * read the first item in the buffer
+	 * Reads the first item in the buffer
 	 * first item is defined as the newest (most recent) item on the queue
+	 * if no item in the buffer, return default type value T()
+	 * if there is only one item in the buffer then first = last
 	 * DOES NOT modify the buffer
 	 */
 	T peekFirstItem()
@@ -52,15 +59,17 @@ public:
 	}
 
 	/*
-	 * read the last element in the buffer
+	 * Reads the last element in the buffer
 	 * last item is defined as the oldest (least recent) item on the queue
+	 * if no item in the buffer, return default type value T()
+	 * if there is only one item in the buffer then first = last
 	 * DOES NOT modify the buffer
 	 */
 	T peekLastItem()
 	{
 		T ret;
 		std::scoped_lock<std::mutex> lck(_mtx);
-		if (!full())
+		if (_empty())
 			ret = nodata;
 		else
 			ret = _buf[_tail];
@@ -68,7 +77,9 @@ public:
 	}
 
 	/*
-	 * read the first and last elemnt in the ring and returns a pair
+	 * Reads the first and last elemnt in the ring and returns a pair containing <first, last>
+	 * if buffer is empty, returns a pair of default type values {T(), T()}
+	 * if only one element present, returns pair of the same value
 	 * DOES NOT modify the ring
 	 */
 	std::pair<T, T> peekFirstNLast()
@@ -78,7 +89,7 @@ public:
 		if (size() == 0) {
 			ret = {nodata, nodata};
 		} else if (size() == 1) {
-			ret.first = nodata;
+			ret.first = _buf[_tail];
 			ret.second = _buf[_tail];
 		} else {
 			ret.first = _buf[_getCurrIdx()];
@@ -88,7 +99,7 @@ public:
 	}
 
 	/*
-	 * reset the structure back to default state
+	 * Resets the structure back to default state
 	 * by resetting _head, _tail, _isFull
 	 * DOE NOT actually modify the underlying container
 	 */
@@ -100,7 +111,7 @@ public:
 	}
 
 	/*
-	 * print out all elements in the buffer in reverse chrono order along with
+	 * Prints out all elements in the buffer in reverse chrono order along with
 	 * the values of _head and _tail
 	 * this function is only useful for debugging purposes
 	 */
@@ -117,13 +128,19 @@ public:
 	}
 
 
+	/*
+	 * Returns true if buffer is full (i.e., contains _maxSz elements), false otherwise
+	 */
 	bool full() const { return _isFull; }
 
+	/*
+	 * Returns the maximum capacity possible (different from size())
+	 */
 	size_t capacity() const { return _maxSz; }
 
 	/*
+	 * Reurns actual size of buffer (i.e., number of actual elements available)
 	 * requires _mtx to be acquired first
-	 * reurns actual size of buffer (i.e., number of elements available)
 	 * DOES NOT modify the buffer
 	 */
 	size_t size() const
@@ -135,8 +152,9 @@ public:
 	}
 
 private:
-	/* requires that _buf is non-empty and _mtx has been locked
-	 * returns the index to the most-recent item (i.e., one before _head)
+	/*
+	 * Returns the index to the most-recently added item (i.e., one before _head)
+	 * requires that _buf is non-empty and _mtx has been locked
 	 */
 	inline size_t _getCurrIdx()
 	{
@@ -145,8 +163,10 @@ private:
 		return _head-1;
 	}
 
-	/* requires _mtx has been locked
-	 * returns true if ring is empty, false otherwise */
+	/*
+	 * Returns true if ring is empty, false otherwise
+	 * requires _mtx has been locked
+	 */
 	bool _empty()
 	{
 		return (!_isFull && _head == _tail);
