@@ -40,32 +40,32 @@ void test_circularBuffer_double() {
 	assert(cb.peekFirstNLast() == std::make_pair(1.1, 1.1));
 
 	cb.put(2.2);
-	assert(cb.peekFirstItem() == 2.2);
-	assert(cb.peekLastItem() == 1.1);
-	assert(cb.size() == 2);
-	assert(cb.capacity() == 2);
-	assert(cb.peekFirstNLast() == std::make_pair(2.2, 1.1));
-
-	cb.put(3.3);
-	assert(cb.peekFirstItem() == 3.3);
+	assert(cb.peekFirstItem() == 1.1);
 	assert(cb.peekLastItem() == 2.2);
 	assert(cb.size() == 2);
 	assert(cb.capacity() == 2);
-	assert(cb.peekFirstNLast() == std::make_pair(3.3, 2.2));
+	assert(cb.peekFirstNLast() == std::make_pair(1.1, 2.2));
 
-	cb.put(4.4);
-	assert(cb.peekFirstItem() == 4.4);
+	cb.put(3.3);
+	assert(cb.peekFirstItem() == 2.2);
 	assert(cb.peekLastItem() == 3.3);
 	assert(cb.size() == 2);
 	assert(cb.capacity() == 2);
-	assert(cb.peekFirstNLast() == std::make_pair(4.4, 3.3));
+	assert(cb.peekFirstNLast() == std::make_pair(2.2, 3.3));
 
-	cb.put(5.5);
-	assert(cb.peekFirstItem() == 5.5);
+	cb.put(4.4);
+	assert(cb.peekFirstItem() == 3.3);
 	assert(cb.peekLastItem() == 4.4);
 	assert(cb.size() == 2);
 	assert(cb.capacity() == 2);
-	assert(cb.peekFirstNLast() == std::make_pair(5.5, 4.4));
+	assert(cb.peekFirstNLast() == std::make_pair(3.3, 4.4));
+
+	cb.put(5.5);
+	assert(cb.peekFirstItem() == 4.4);
+	assert(cb.peekLastItem() == 5.5);
+	assert(cb.size() == 2);
+	assert(cb.capacity() == 2);
+	assert(cb.peekFirstNLast() == std::make_pair(4.4, 5.5));
 
 	cb.reset();
 	assert(!cb.full());
@@ -93,27 +93,27 @@ void test_circularBuffer_triple()
 
 	cb.put(222);
 	assert(!cb.full());
-	assert(cb.peekFirstItem() == 222);
-	assert(cb.peekLastItem() == 111);
+	assert(cb.peekFirstItem() == 111);
+	assert(cb.peekLastItem() == 222);
 	assert(cb.size() == 2);
 	assert(cb.capacity() == 3);
-	assert(cb.peekFirstNLast() == std::make_pair(222, 111));
+	assert(cb.peekFirstNLast() == std::make_pair(111, 222));
 
 	cb.put(333);
 	assert(cb.full());
-	assert(cb.peekFirstItem() == 333);
-	assert(cb.peekLastItem() == 111);
+	assert(cb.peekFirstItem() == 111);
+	assert(cb.peekLastItem() == 333);
 	assert(cb.size() == 3);
 	assert(cb.capacity() == 3);
-	assert(cb.peekFirstNLast() == std::make_pair(333, 111));
+	assert(cb.peekFirstNLast() == std::make_pair(111, 333));
 
 	cb.put(444);
 	assert(cb.full());
-	assert(cb.peekFirstItem() == 444);
-	assert(cb.peekLastItem() == 222);
+	assert(cb.peekFirstItem() == 222);
+	assert(cb.peekLastItem() == 444);
 	assert(cb.size() == 3);
 	assert(cb.capacity() == 3);
-	assert(cb.peekFirstNLast() == std::make_pair(444, 222));
+	assert(cb.peekFirstNLast() == std::make_pair(222, 444));
 
 }
 
