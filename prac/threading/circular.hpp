@@ -6,14 +6,25 @@ using std::cout;
 
 template <class T>
 class CircularBuffer {
+/*
+ * Description:
+ *		This implementation of CircularBuffer DOES NOT support get() function that
+ *		removes an item from the buffer. Instead it supports peeking at the first
+ *		and last items currently in the buffer.
+ *
+ * Public APIs:
+ *		CircularBuffer(), put(), peekFirstItem(), peekLastItem(), reset(), full(),
+ *		capacity(), size()
+ */
 public:
 	explicit CircularBuffer(size_t size) :
 		_buf(std::unique_ptr<T[]>(new T[size])),
 		_maxSz(size) {}
 
 	/*
-	 * Puts item into the buffer
-	 * updates internal _head and _tail pointer accordingly
+	 * @Requires: CircularBuffer instance already created
+	 * @Modifies: Underlying container
+	 * @Effect  : Puts item into the buffer, overwrites oldest item if buffer is full
 	 */
 	void put(T item)
 	{
@@ -26,29 +37,18 @@ public:
 		return;
 	}
 
-	/*
-	 * Consumes the element pointed to by _tail pointer
-	 * THIS FUNCTION STILL NEEDS TO BE TESTED BEFORE USE!
-	 */
-	T get()
-	{
-		std::scoped_lock<std::mutex> lck(_mtx);
-		if (_empty())
-			return T();
-		auto val = _buf[_tail];
-		_isFull = false;
-		_tail = (_tail + 1) % _maxSz;
-		return val;
-	}
+	// This implementation does not support get() function
+	// T get() {}
 
 	/*
-	 * Reads the first item in the buffer
-	 * first item is defined as the newest (most recent) item on the queue
-	 * if no item in the buffer, return default type value T()
-	 * if there is only one item in the buffer then first = last
-	 * DOES NOT modify the buffer
+	 * @Requires: CircularBuffer instance already created
+	 * @Modifies: None
+	 * @Effect  : Returns the last item in the buffer where last item is defined
+	 *			  as the newest (most recent) item put into the buffer. If the buffer
+	 *			  is currently empty, returns default type value T(). If only one item
+	 *			  is currently available, that item will be returned.
 	 */
-	T peekFirstItem()
+	T peekLastItem()
 	{
 		T ret;
 		std::scoped_lock<std::mutex> lck(_mtx);
@@ -59,13 +59,14 @@ public:
 	}
 
 	/*
-	 * Reads the last element in the buffer
-	 * last item is defined as the oldest (least recent) item on the queue
-	 * if no item in the buffer, return default type value T()
-	 * if there is only one item in the buffer then first = last
-	 * DOES NOT modify the buffer
+	 * @Requires: CircularBuffer instance already created
+	 * @Modifies: None
+	 * @Effect  : Returns the first item in the buffer where first item is defined
+	 *			  as the oldest (least recent) item put into the buffer. If the buffer
+	 *			  is currently empty, returns default type value T(). If only one item
+	 *			  is currently available, that item will be returned.
 	 */
-	T peekLastItem()
+	T peekFirstItem()
 	{
 		T ret;
 		std::scoped_lock<std::mutex> lck(_mtx);
@@ -77,10 +78,11 @@ public:
 	}
 
 	/*
-	 * Reads the first and last elemnt in the ring and returns a pair containing <first, last>
-	 * if buffer is empty, returns a pair of default type values {T(), T()}
-	 * if only one element present, returns pair of the same value
-	 * DOES NOT modify the ring
+	 * @Requires: CircularBuffer instance already created
+	 * @Modifies: None
+	 * @Effect  : Returns a pair of <first, last> elements from the buffer. First and
+	 *			  and last item are defined the same way as in peekLastItem() and
+	 *			  peekFirstItem()
 	 */
 	std::pair<T, T> peekFirstNLast()
 	{
@@ -92,16 +94,17 @@ public:
 			ret.first = _buf[_tail];
 			ret.second = _buf[_tail];
 		} else {
-			ret.first = _buf[_getCurrIdx()];
-			ret.second = _buf[_tail];
+			ret.first = _buf[_tail];
+			ret.second = _buf[_getCurrIdx()];
 		}
 		return ret;
 	}
 
 	/*
-	 * Resets the structure back to default state
-	 * by resetting _head, _tail, _isFull
-	 * DOE NOT actually modify the underlying container
+	 * Requires: CircularBuffer instance already created
+	 * Modifies: Underlying container
+	 * Effect  : Resets the buffer back to when it's first created (i.e. same capacity,
+	 *			 zero size, etc)
 	 */
 	void reset()
 	{
@@ -111,9 +114,39 @@ public:
 	}
 
 	/*
-	 * Prints out all elements in the buffer in reverse chrono order along with
-	 * the values of _head and _tail
-	 * this function is only useful for debugging purposes
+	 * @Requires: CircularBuffer instance already created
+	 * @Modifies: None
+	 * @Effect  : Returns true if buffer is full (size == capacity), false otherwise
+	 */
+	bool full() const { return _isFull; }
+
+	/*
+	 * @Requires: CircularBuffer instance already created
+	 * @Modifies: None
+	 * @Effect  : Returns the maximum capacity of buffer
+	 */
+	size_t capacity() const { return _maxSz; }
+
+	/*
+	 * @Requires: CircularBuffer instance already created
+	 * @Modifies: None
+	 * @Effect  : Returns the actual size of buffer (i.e., number of elements currently
+	 *			  stored in the buffer)
+	 */
+	size_t size() const
+	{
+		size_t sz = _maxSz;
+		if (!_isFull)
+			sz = _head - _tail;
+		return sz;
+	}
+
+	/*
+	 * @Requires: CircularBuffer instance already created
+	 * @Modifies: None
+	 * @Effect  : Prints out all elements currently in the buffer in reverse chrono order
+	 *			  (least recent on the LHS, most recent on RHS) as well as the values of
+	 *			  _head and _tail. This function should only be used for debugging purposes.
 	 */
 	void printAll()
 	{
@@ -125,30 +158,6 @@ public:
 		}
 		cout << "first=" << ret.first << ",last=" << ret.second << "(head=" <<
 			_head << " tail=" << _tail << ")\n";
-	}
-
-
-	/*
-	 * Returns true if buffer is full (i.e., contains _maxSz elements), false otherwise
-	 */
-	bool full() const { return _isFull; }
-
-	/*
-	 * Returns the maximum capacity possible (different from size())
-	 */
-	size_t capacity() const { return _maxSz; }
-
-	/*
-	 * Reurns actual size of buffer (i.e., number of actual elements available)
-	 * requires _mtx to be acquired first
-	 * DOES NOT modify the buffer
-	 */
-	size_t size() const
-	{
-		size_t sz = _maxSz;
-		if (!_isFull)
-			sz = _head - _tail;
-		return sz;
 	}
 
 private:
