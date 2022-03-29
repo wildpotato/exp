@@ -9,7 +9,7 @@ using namespace std;
  *
  * Run command
  *
- * $ awk `!seen[$0]++` filename
+ * $ awk '!seen[$0]++' filename
  *
  * to remove redundant lines in file filename
  */
